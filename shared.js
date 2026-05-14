@@ -16,8 +16,16 @@
 		"CKA_SHOW_NOTIFICATION",
 		"CKA_DISMISS_DIALOG_DETECTED",
 		"CKA_CLEAR_ERRORS",
+		"CKA_EXPORT_SETTINGS",
+		"CKA_IMPORT_SETTINGS",
+		"CKA_GET_LIFETIME_STATS",
+		"CKA_RESET_STATS",
+		"CKA_NOTIFY_COORDINATED",
+		"CKA_CLICK_RECORDED",
 	]);
 	const MESSAGE_TYPE_SET = new Set(MESSAGE_TYPES);
+
+	const DEFAULT_WORK_DAYS = Object.freeze([1, 2, 3, 4, 5]);
 
 	const DEFAULT_SETTINGS = Object.freeze({
 		enabled: true,
@@ -33,6 +41,18 @@
 		keyboardShortcuts: true,
 		browserNotifications: false,
 		theme: "auto",
+		humanizationPreset: "medium",
+		customTheme: {},
+		scheduleEnabled: false,
+		workStartHour: 9,
+		workEndHour: 18,
+		workDays: DEFAULT_WORK_DAYS,
+		activeDays: [],
+		smartPause: false,
+		multiTabEnabled: false,
+		tabSyncMode: "independent",
+		customSelectors: [],
+		targetMode: "auto",
 	});
 
 	const CONNECT_ACTION_RE = /\bconnect\b/i;
@@ -66,6 +86,71 @@
 	const JITTER_MIN = 0.05;
 	const JITTER_MAX = 0.35;
 	const WAKE_LOCK_RETRY_MS = 30000;
+
+	const HUMANIZATION_PRESETS = Object.freeze({
+		minimal: {
+			simulateActivity: false,
+			dismissDialogs: false,
+			jitterRange: 0.05,
+			humanizeSignals: false,
+		},
+		low: {
+			simulateActivity: true,
+			dismissDialogs: false,
+			jitterRange: 0.08,
+			humanizeSignals: true,
+		},
+		medium: {
+			simulateActivity: true,
+			dismissDialogs: true,
+			jitterRange: 0.15,
+			humanizeSignals: true,
+		},
+		high: {
+			simulateActivity: true,
+			dismissDialogs: true,
+			jitterRange: 0.25,
+			humanizeSignals: true,
+		},
+		aggressive: {
+			simulateActivity: true,
+			dismissDialogs: true,
+			jitterRange: 0.25,
+			humanizeSignals: true,
+		},
+	});
+
+	const TAB_SYNC_MODES = Object.freeze([
+		"independent",
+		"coordinated",
+		"primary",
+	]);
+	const TARGET_MODES = Object.freeze(["auto", "custom"]);
+	const DEFAULT_CUSTOM_SELECTORS = Object.freeze([
+		{
+			selector: "colab-connect-button",
+			label: "colab-connect-button",
+			enabled: true,
+		},
+		{ selector: "#connect", label: "#connect", enabled: true },
+		{
+			selector: '[aria-label*="Connect" i]',
+			label: "aria Connect",
+			enabled: true,
+		},
+		{
+			selector: '[aria-label*="Reconnect" i]',
+			label: "aria Reconnect",
+			enabled: true,
+		},
+	]);
+	const LIFETIME_STATS_KEYS = Object.freeze([
+		"totalClicks",
+		"totalFailures",
+		"totalUptimeMs",
+		"firstUsedAt",
+		"longestSessionMs",
+	]);
 
 	/**
 	 * Validates the shared runtime message envelope.
@@ -165,6 +250,41 @@
 					? input.browserNotifications
 					: DEFAULT_SETTINGS.browserNotifications,
 			theme: validateTheme(input.theme),
+			humanizationPreset: validateHumanizationPreset(input.humanizationPreset),
+			customTheme: validateCustomTheme(input.customTheme),
+			scheduleEnabled:
+				typeof input.scheduleEnabled === "boolean"
+					? input.scheduleEnabled
+					: DEFAULT_SETTINGS.scheduleEnabled,
+			workStartHour: validNumber(
+				input.workStartHour,
+				DEFAULT_SETTINGS.workStartHour,
+				0,
+				23,
+			),
+			workEndHour: validNumber(
+				input.workEndHour,
+				DEFAULT_SETTINGS.workEndHour,
+				0,
+				23,
+			),
+			workDays: validateWorkDays(input.workDays),
+			activeDays: Array.isArray(input.activeDays)
+				? input.activeDays
+						.filter((d) => typeof d === "number" && d >= 0 && d <= 6)
+						.slice(0, 7)
+				: [],
+			smartPause:
+				typeof input.smartPause === "boolean"
+					? input.smartPause
+					: DEFAULT_SETTINGS.smartPause,
+			multiTabEnabled:
+				typeof input.multiTabEnabled === "boolean"
+					? input.multiTabEnabled
+					: DEFAULT_SETTINGS.multiTabEnabled,
+			tabSyncMode: validateTabSyncMode(input.tabSyncMode),
+			customSelectors: validateCustomSelectors(input.customSelectors),
+			targetMode: validateTargetMode(input.targetMode),
 		};
 	}
 
@@ -175,6 +295,106 @@
 	 */
 	function validateTheme(value) {
 		if (value === "light" || value === "dark") {
+			return value;
+		}
+		return "auto";
+	}
+
+	/**
+	 * Validates humanization preset name.
+	 * @param {unknown} value
+	 * @returns {keyof HUMANIZATION_PRESETS}
+	 */
+	function validateHumanizationPreset(value) {
+		if (typeof value === "string" && value in HUMANIZATION_PRESETS) {
+			return value;
+		}
+		return "medium";
+	}
+
+	/**
+	 * Merges humanization preset values into base settings.
+	 * @param {typeof DEFAULT_SETTINGS} settings
+	 * @returns {typeof DEFAULT_SETTINGS}
+	 */
+	function applyHumanizationPreset(settings, presetName) {
+		const name = presetName || settings.humanizationPreset;
+		const preset = HUMANIZATION_PRESETS[name];
+		if (!preset) return settings;
+		return { ...settings, ...preset };
+	}
+
+	/**
+	 * Validates custom theme object.
+	 * @param {unknown} value
+	 * @returns {Record<string, string>}
+	 */
+	function validateCustomTheme(value) {
+		if (value && typeof value === "object" && !Array.isArray(value)) {
+			const theme = {};
+			for (const [key, val] of Object.entries(value)) {
+				if (typeof val === "string" && val.startsWith("#")) {
+					theme[key] = val;
+				}
+			}
+			return theme;
+		}
+		return {};
+	}
+
+	/**
+	 * Validates work days array.
+	 * @param {unknown} value
+	 * @returns {number[]}
+	 */
+	function validateWorkDays(value) {
+		if (Array.isArray(value)) {
+			return value
+				.filter((d) => typeof d === "number" && d >= 0 && d <= 6)
+				.slice(0, 7);
+		}
+		return DEFAULT_WORK_DAYS;
+	}
+
+	/**
+	 * Validates tab sync mode.
+	 * @param {unknown} value
+	 * @returns {string}
+	 */
+	function validateTabSyncMode(value) {
+		if (typeof value === "string" && TAB_SYNC_MODES.includes(value)) {
+			return value;
+		}
+		return "independent";
+	}
+
+	/**
+	 * Validates custom selectors array.
+	 * @param {unknown} value
+	 * @returns {Array<{selector: string, label: string, enabled: boolean}>}
+	 */
+	function validateCustomSelectors(value) {
+		if (Array.isArray(value)) {
+			return value
+				.filter(
+					(s) => s && typeof s === "object" && typeof s.selector === "string",
+				)
+				.map((s) => ({
+					selector: String(s.selector),
+					label: typeof s.label === "string" ? s.label : String(s.selector),
+					enabled: s.enabled !== false,
+				}));
+		}
+		return [];
+	}
+
+	/**
+	 * Validates target mode.
+	 * @param {unknown} value
+	 * @returns {string}
+	 */
+	function validateTargetMode(value) {
+		if (typeof value === "string" && TARGET_MODES.includes(value)) {
 			return value;
 		}
 		return "auto";
@@ -298,6 +518,47 @@
 	}
 
 	/**
+	 * Creates default lifetime stats object.
+	 * @returns {Record<string, number>}
+	 */
+	function createDefaultLifetimeStats() {
+		return {
+			totalClicks: 0,
+			totalFailures: 0,
+			totalUptimeMs: 0,
+			firstUsedAt: Date.now(),
+			longestSessionMs: 0,
+		};
+	}
+
+	/**
+	 * Formats lifetime stats for display.
+	 * @param {Record<string, unknown>} stats
+	 * @returns {Record<string, string>}
+	 */
+	function formatLifetimeStats(stats) {
+		const s = stats || createDefaultLifetimeStats();
+		const totalClicks = Number(s.totalClicks || 0);
+		const totalFailures = Number(s.totalFailures || 0);
+		const totalUptimeMs = Number(s.totalUptimeMs || 0);
+		const firstUsedAt = Number(s.firstUsedAt || Date.now());
+		const longestSessionMs = Number(s.longestSessionMs || 0);
+		const successRate =
+			totalClicks + totalFailures > 0
+				? Math.round((totalClicks / (totalClicks + totalFailures)) * 100)
+				: 0;
+		const daysSinceFirstUse = Math.floor((Date.now() - firstUsedAt) / 86400000);
+		return [
+			`Clicks: ${totalClicks}`,
+			`Failures: ${totalFailures}`,
+			`Success: ${successRate}%`,
+			`Uptime: ${formatUptime(totalUptimeMs)}`,
+			`First used: ${daysSinceFirstUse > 0 ? `${daysSinceFirstUse}d ago` : "Today"}`,
+			`Longest session: ${formatUptime(longestSessionMs)}`,
+		].join(" | ");
+	}
+
+	/**
 	 * Normalizes label-like text for action classification.
 	 * @param {unknown} value
 	 * @returns {string}
@@ -318,6 +579,11 @@
 		JITTER_MIN,
 		JITTER_MAX,
 		WAKE_LOCK_RETRY_MS,
+		HUMANIZATION_PRESETS,
+		TAB_SYNC_MODES,
+		TARGET_MODES,
+		DEFAULT_CUSTOM_SELECTORS,
+		LIFETIME_STATS_KEYS,
 		classifyConnectLabel,
 		isDismissLabel,
 		formatUptime,
@@ -327,7 +593,16 @@
 		validateMessage,
 		validateSettings,
 		validateTheme,
+		validateHumanizationPreset,
+		applyHumanizationPreset,
+		validateCustomTheme,
+		validateWorkDays,
+		validateTabSyncMode,
+		validateCustomSelectors,
+		validateTargetMode,
 		validNumber,
 		normalizeLabel,
+		createDefaultLifetimeStats,
+		formatLifetimeStats,
 	});
 })(globalThis);

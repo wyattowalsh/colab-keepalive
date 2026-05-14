@@ -8,6 +8,7 @@ const {
 	SOURCE,
 	createRequestId,
 	validateSettings,
+	formatUptime,
 } = globalThis.ColabKeepaliveShared;
 
 const elements = {
@@ -19,6 +20,7 @@ const elements = {
 	jitterNumber: document.getElementById("jitter-number"),
 	jitterOutput: document.getElementById("jitter-output"),
 	tabCount: document.getElementById("tab-count"),
+	nextClick: document.getElementById("next-click"),
 	lastClick: document.getElementById("last-click"),
 	failureCount: document.getElementById("failure-count"),
 	uptime: document.getElementById("uptime"),
@@ -29,6 +31,7 @@ const elements = {
 	saveState: document.getElementById("save-state"),
 	version: document.getElementById("version"),
 	themeToggle: document.getElementById("theme-toggle"),
+	humanizationPreset: document.getElementById("humanization-preset"),
 	humanizeSignals: document.getElementById("humanize-signals"),
 	simulateActivity: document.getElementById("simulate-activity"),
 	dismissDialogs: document.getElementById("dismiss-dialogs"),
@@ -40,6 +43,21 @@ const elements = {
 	dismissIndicator: document.getElementById("dismiss-indicator"),
 	clearErrors: document.getElementById("clear-errors"),
 	errorMessage: document.getElementById("error-message"),
+	totalClicks: document.getElementById("total-clicks"),
+	successRate: document.getElementById("success-rate"),
+	totalUptime: document.getElementById("total-uptime"),
+	longestSession: document.getElementById("longest-session"),
+	firstUsed: document.getElementById("first-used"),
+	resetStats: document.getElementById("reset-stats"),
+	exportSettings: document.getElementById("export-settings"),
+	importSettings: document.getElementById("import-settings"),
+	importFile: document.getElementById("import-file"),
+	tabDashboard: document.getElementById("tab-dashboard"),
+	tabSettings: document.getElementById("tab-settings"),
+	tabAdvanced: document.getElementById("tab-advanced"),
+	panelDashboard: document.getElementById("panel-dashboard"),
+	panelSettings: document.getElementById("panel-settings"),
+	panelAdvanced: document.getElementById("panel-advanced"),
 };
 
 const state = {
@@ -47,6 +65,8 @@ const state = {
 	saveTimer: null,
 	isSaving: false,
 	activeTabCount: 0,
+	countdownTimer: null,
+	nextClickAt: null,
 };
 
 const THEME_CYCLE = ["auto", "light", "dark"];
@@ -81,10 +101,37 @@ function themeIcon(theme) {
 	}
 }
 
+/**
+ * Applies custom theme colors as CSS custom properties.
+ * @param {Record<string, string>} customTheme
+ * @returns {void}
+ */
+function applyCustomTheme(customTheme) {
+	const html = document.documentElement;
+	if (customTheme?.accent) {
+		html.style.setProperty("--accent", customTheme.accent);
+		html.style.setProperty("--accent-strong", customTheme.accent);
+	} else {
+		html.style.removeProperty("--accent");
+		html.style.removeProperty("--accent-strong");
+	}
+	if (customTheme?.bg) {
+		html.style.setProperty("--bg", customTheme.bg);
+	} else {
+		html.style.removeProperty("--bg");
+	}
+	if (customTheme?.fg) {
+		html.style.setProperty("--fg", customTheme.fg);
+	} else {
+		html.style.removeProperty("--fg");
+	}
+}
+
 document.addEventListener("DOMContentLoaded", () => {
 	wireEvents();
 	void refreshStatus();
 	window.setInterval(() => void refreshStatus(), 2000);
+	state.countdownTimer = window.setInterval(updateCountdown, 1000);
 });
 
 /** @returns {void} */
@@ -135,6 +182,11 @@ function wireEvents() {
 		scheduleSave();
 	});
 
+	elements.humanizationPreset.addEventListener("change", () => {
+		state.settings.humanizationPreset = elements.humanizationPreset.value;
+		scheduleSave();
+	});
+
 	elements.themeToggle.addEventListener("click", () => {
 		const next = nextTheme(state.settings.theme);
 		state.settings.theme = next;
@@ -151,6 +203,217 @@ function wireEvents() {
 	});
 	elements.testClick.addEventListener("click", () => void testClickNow());
 	elements.clearErrors.addEventListener("click", () => void clearErrorsNow());
+	elements.resetStats.addEventListener("click", () => void resetStatsNow());
+	elements.exportSettings.addEventListener(
+		"click",
+		() => void exportSettingsNow(),
+	);
+	elements.importSettings.addEventListener("click", () =>
+		elements.importFile.click(),
+	);
+	elements.importFile.addEventListener(
+		"change",
+		(event) => void importSettingsNow(event),
+	);
+
+	elements.scheduleEnabled.addEventListener("change", () => {
+		state.settings.scheduleEnabled = elements.scheduleEnabled.checked;
+		elements.scheduleControls.classList.toggle(
+			"disabled",
+			!elements.scheduleEnabled.checked,
+		);
+		scheduleSave();
+	});
+	elements.workStart.addEventListener("change", () => {
+		state.settings.workStartHour = clampHour(elements.workStart.value);
+		scheduleSave();
+	});
+	elements.workEnd.addEventListener("change", () => {
+		state.settings.workEndHour = clampHour(elements.workEnd.value);
+		scheduleSave();
+	});
+	for (const cb of elements.workDays) {
+		cb.addEventListener("change", () => {
+			state.settings.workDays = Array.from(elements.workDays)
+				.filter((c) => c.checked)
+				.map((c) => Number(c.value));
+			scheduleSave();
+		});
+	}
+
+	elements.multiTabEnabled.addEventListener("change", () => {
+		state.settings.multiTabEnabled = elements.multiTabEnabled.checked;
+		elements.multitabControls.classList.toggle(
+			"disabled",
+			!elements.multiTabEnabled.checked,
+		);
+		scheduleSave();
+	});
+	elements.tabSyncMode.addEventListener("change", () => {
+		state.settings.tabSyncMode = elements.tabSyncMode.value;
+		scheduleSave();
+	});
+	elements.targetMode.addEventListener("change", () => {
+		state.settings.targetMode = elements.targetMode.checked ? "custom" : "auto";
+		elements.customSelectors.classList.toggle(
+			"disabled",
+			!elements.targetMode.checked,
+		);
+		scheduleSave();
+	});
+
+	elements.themeAccent.addEventListener("input", () => {
+		state.settings.customTheme = state.settings.customTheme || {};
+		state.settings.customTheme.accent = elements.themeAccent.value;
+		applyCustomTheme(state.settings.customTheme);
+		scheduleSave();
+	});
+	elements.themeBg.addEventListener("input", () => {
+		state.settings.customTheme = state.settings.customTheme || {};
+		state.settings.customTheme.bg = elements.themeBg.value;
+		applyCustomTheme(state.settings.customTheme);
+		scheduleSave();
+	});
+	elements.themeFg.addEventListener("input", () => {
+		state.settings.customTheme = state.settings.customTheme || {};
+		state.settings.customTheme.fg = elements.themeFg.value;
+		applyCustomTheme(state.settings.customTheme);
+		scheduleSave();
+	});
+	elements.resetTheme.addEventListener("click", () => {
+		state.settings.customTheme = {};
+		applyCustomTheme({});
+		applySettingsToUi(state.settings);
+		scheduleSave();
+	});
+
+	elements.tabDashboard.addEventListener("click", () => switchTab("dashboard"));
+	elements.tabSettings.addEventListener("click", () => switchTab("settings"));
+	elements.tabAdvanced.addEventListener("click", () => switchTab("advanced"));
+}
+
+/** @param {"dashboard" | "settings" | "advanced"} tab */
+function switchTab(tab) {
+	const tabs = {
+		dashboard: { btn: elements.tabDashboard, panel: elements.panelDashboard },
+		settings: { btn: elements.tabSettings, panel: elements.panelSettings },
+		advanced: { btn: elements.tabAdvanced, panel: elements.panelAdvanced },
+	};
+	for (const { btn, panel } of Object.values(tabs)) {
+		btn.classList.remove("active");
+		btn.setAttribute("aria-selected", "false");
+		panel.classList.remove("active");
+		panel.hidden = true;
+	}
+	const active = tabs[tab];
+	if (active) {
+		active.btn.classList.add("active");
+		active.btn.setAttribute("aria-selected", "true");
+		active.panel.classList.add("active");
+		active.panel.hidden = false;
+	}
+}
+
+/** @returns {Promise<void>} */
+async function resetStatsNow() {
+	elements.resetStats.disabled = true;
+	elements.resetStats.textContent = "...";
+	const response = await sendRuntimeMessage("CKA_RESET_STATS", {});
+	if (!response.ok) {
+		renderError(response.error?.message || "Could not reset stats");
+	} else {
+		elements.saveState.textContent = "Stats reset";
+	}
+	await fetchLifetimeStats();
+	elements.resetStats.textContent = "↺";
+	elements.resetStats.disabled = false;
+}
+
+/** @returns {Promise<void>} */
+async function fetchLifetimeStats() {
+	const response = await sendRuntimeMessage("CKA_GET_LIFETIME_STATS", {});
+	if (!response.ok) {
+		console.warn(
+			LOG_PREFIX,
+			"Could not fetch lifetime stats:",
+			response.error?.message,
+		);
+		return;
+	}
+	const stats = response.data?.stats || {};
+	elements.totalClicks.textContent = String(stats.totalClicks || 0);
+	const totalAttempts = (stats.totalClicks || 0) + (stats.totalFailures || 0);
+	const rate =
+		totalAttempts > 0
+			? Math.round(((stats.totalClicks || 0) / totalAttempts) * 100)
+			: 0;
+	elements.successRate.textContent = `${rate}%`;
+	elements.totalUptime.textContent = formatUptime(stats.totalUptimeMs || 0);
+	elements.longestSession.textContent = formatUptime(
+		stats.longestSessionMs || 0,
+	);
+	elements.firstUsed.textContent = stats.firstUsedAt
+		? new Intl.DateTimeFormat(undefined, {
+				month: "short",
+				day: "numeric",
+				year: "numeric",
+			}).format(new Date(stats.firstUsedAt))
+		: "Today";
+}
+
+/** @returns {Promise<void>} */
+async function exportSettingsNow() {
+	elements.exportSettings.disabled = true;
+	elements.exportSettings.textContent = "Exporting...";
+	const response = await sendRuntimeMessage("CKA_EXPORT_SETTINGS", {});
+	if (!response.ok) {
+		renderError(response.error?.message || "Could not export settings");
+		elements.exportSettings.textContent = "Export Settings";
+		elements.exportSettings.disabled = false;
+		return;
+	}
+	const blob = new Blob([JSON.stringify(response.data.settings, null, 2)], {
+		type: "application/json",
+	});
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = `colab-keepalive-settings-${new Date().toISOString().split("T")[0]}.json`;
+	a.click();
+	URL.revokeObjectURL(url);
+	elements.saveState.textContent = "Exported";
+	elements.exportSettings.textContent = "Export Settings";
+	elements.exportSettings.disabled = false;
+}
+
+/**
+ * @param {Event} event
+ * @returns {Promise<void>}
+ */
+async function importSettingsNow(event) {
+	const file = event.target.files?.[0];
+	if (!file) return;
+	elements.importSettings.disabled = true;
+	elements.importSettings.textContent = "Importing...";
+	try {
+		const text = await file.text();
+		const parsed = JSON.parse(text);
+		const response = await sendRuntimeMessage("CKA_IMPORT_SETTINGS", {
+			settings: parsed,
+		});
+		if (!response.ok) {
+			renderError(response.error?.message || "Could not import settings");
+		} else {
+			state.settings = validateSettings(response.data.settings);
+			applySettingsToUi(state.settings);
+			elements.saveState.textContent = "Imported";
+		}
+	} catch (error) {
+		renderError(error?.message || "Invalid settings file");
+	}
+	elements.importSettings.textContent = "Import Settings";
+	elements.importSettings.disabled = false;
+	elements.importFile.value = "";
 }
 
 /** @returns {Promise<void>} */
@@ -177,6 +440,7 @@ async function refreshStatus() {
 	elements.version.textContent =
 		version || chrome.runtime.getManifest().version;
 	renderStatus(activeTabCount, aggregateStatus, uptime, notificationPermitted);
+	await fetchLifetimeStats();
 }
 
 /** @returns {Promise<void>} */
@@ -304,6 +568,13 @@ function syncJitterInputs(rawValue, shouldSave, forceClamp = false) {
  * @param {typeof DEFAULT_SETTINGS} settings
  * @returns {void}
  */
+/** @param {string | number} value */
+function clampHour(value) {
+	const n = Number(value);
+	if (!Number.isFinite(n)) return 0;
+	return Math.min(23, Math.max(0, Math.round(n)));
+}
+
 function applySettingsToUi(settings) {
 	elements.enabled.checked = Boolean(settings.enabled);
 
@@ -322,6 +593,8 @@ function applySettingsToUi(settings) {
 	elements.jitterNumber.value = String(jitterPercent);
 	elements.jitterOutput.textContent = `${jitterPercent}%`;
 
+	elements.humanizationPreset.value =
+		settings.humanizationPreset || DEFAULT_SETTINGS.humanizationPreset;
 	elements.humanizeSignals.checked = Boolean(settings.humanizeSignals);
 	elements.simulateActivity.checked = Boolean(settings.simulateActivity);
 	elements.dismissDialogs.checked = Boolean(settings.dismissDialogs);
@@ -333,6 +606,38 @@ function applySettingsToUi(settings) {
 	const theme = settings.theme || "auto";
 	applyTheme(theme);
 	elements.themeToggle.textContent = themeIcon(theme);
+
+	elements.scheduleEnabled.checked = Boolean(settings.scheduleEnabled);
+	elements.scheduleControls.classList.toggle(
+		"disabled",
+		!settings.scheduleEnabled,
+	);
+	elements.workStart.value = String(settings.workStartHour ?? 9);
+	elements.workEnd.value = String(settings.workEndHour ?? 18);
+	const workDays = new Set(settings.workDays || []);
+	for (const cb of elements.workDays) {
+		cb.checked = workDays.has(Number(cb.value));
+	}
+
+	elements.multiTabEnabled.checked = Boolean(settings.multiTabEnabled);
+	elements.multitabControls.classList.toggle(
+		"disabled",
+		!settings.multiTabEnabled,
+	);
+	elements.tabSyncMode.value =
+		settings.tabSyncMode || DEFAULT_SETTINGS.tabSyncMode;
+
+	elements.targetMode.checked = settings.targetMode === "custom";
+	elements.customSelectors.classList.toggle(
+		"disabled",
+		settings.targetMode !== "custom",
+	);
+
+	const customTheme = settings.customTheme || {};
+	elements.themeAccent.value = customTheme.accent || "";
+	elements.themeBg.value = customTheme.bg || "";
+	elements.themeFg.value = customTheme.fg || "";
+	applyCustomTheme(customTheme);
 }
 
 /**
@@ -401,6 +706,38 @@ function renderStatus(
 	} else {
 		elements.errorMessage.hidden = true;
 		elements.errorMessage.textContent = "";
+	}
+
+	// Update countdown target
+	state.nextClickAt = aggregateStatus.nextClickAt
+		? Number(aggregateStatus.nextClickAt)
+		: null;
+	updateCountdown();
+}
+
+/**
+ * Updates the next-click countdown display.
+ * @returns {void}
+ */
+function updateCountdown() {
+	if (!state.nextClickAt) {
+		elements.nextClick.textContent = "—";
+		return;
+	}
+	const remaining = state.nextClickAt - Date.now();
+	if (remaining <= 0) {
+		elements.nextClick.textContent = "Now";
+		return;
+	}
+	const seconds = Math.floor(remaining / 1000) % 60;
+	const minutes = Math.floor(remaining / 60000) % 60;
+	const hours = Math.floor(remaining / 3600000);
+	if (hours > 0) {
+		elements.nextClick.textContent = `${hours}h ${minutes}m`;
+	} else if (minutes > 0) {
+		elements.nextClick.textContent = `${minutes}m ${seconds}s`;
+	} else {
+		elements.nextClick.textContent = `${seconds}s`;
 	}
 }
 

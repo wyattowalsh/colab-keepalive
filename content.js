@@ -5,6 +5,7 @@ const {
 	LOG_PREFIX,
 	SOURCE,
 	SYNTHETIC_EVENT_TYPES,
+	applyHumanizationPreset,
 	classifyConnectLabel,
 	createRequestId,
 	errorResponse,
@@ -70,8 +71,10 @@ void initialize();
  * @returns {Promise<void>}
  */
 async function initialize() {
-	state.settings = validateSettings(
-		await chrome.storage.sync.get(Object.keys(DEFAULT_SETTINGS)),
+	state.settings = applyHumanizationPreset(
+		validateSettings(
+			await chrome.storage.sync.get(Object.keys(DEFAULT_SETTINGS)),
+		),
 	);
 	state.initialized = true;
 	setupObserver();
@@ -140,7 +143,7 @@ async function handleMessage(message) {
  * @returns {void}
  */
 function applySettings(settings) {
-	state.settings = validateSettings(settings);
+	state.settings = applyHumanizationPreset(validateSettings(settings));
 	clearKeepAliveInterval();
 	stopActivitySimulation();
 	releaseWakeLock();
@@ -185,6 +188,25 @@ async function keepAliveTick({ manual }) {
 		return okResponse(buildStatus("disabled"));
 	}
 
+	// Check schedule
+	if (!manual && state.settings.scheduleEnabled && !isWithinSchedule()) {
+		debugLog("Outside scheduled work hours; skipping tick");
+		return okResponse(buildStatus("scheduled-pause"));
+	}
+
+	// Check multi-tab coordination
+	if (!manual && state.settings.multiTabEnabled) {
+		const coord = await checkMultiTabCoordination();
+		if (coord.skip) {
+			debugLog("Multi-tab coordination: skipping tick", coord.reason);
+			return okResponse(buildStatus(coord.reason || "coordinated-pause"));
+		}
+		if (coord.delay && coord.delay > 0) {
+			debugLog("Multi-tab coordination: delaying tick by", coord.delay, "ms");
+			await new Promise((resolve) => setTimeout(resolve, coord.delay));
+		}
+	}
+
 	// Check for dismiss dialogs first
 	if (state.settings.dismissDialogs) {
 		const dismissed = findAndClickDismissDialog();
@@ -215,6 +237,7 @@ async function keepAliveTick({ manual }) {
 		state.lastClickAt = Date.now();
 		state.lastCandidateLabel = candidate.label;
 		debugLog("Clicked control", candidate.label);
+		await recordClickEvent("click");
 		await sendStatus(manual ? "manual-click" : "interval-click");
 		return okResponse(buildStatus(manual ? "manual-click" : "interval-click"));
 	} catch (error) {
@@ -222,6 +245,7 @@ async function keepAliveTick({ manual }) {
 			"CLICK_FAILED",
 			error?.message || "Could not click Connect/Reconnect control",
 		);
+		await recordClickEvent("failure");
 		await sendStatus("click-failed");
 		return errorResponse(
 			"CLICK_FAILED",
@@ -235,6 +259,25 @@ async function keepAliveTick({ manual }) {
  * @returns {{element: HTMLElement, label: string} | null}
  */
 function findConnectControl() {
+	const useCustom = state.settings.targetMode === "custom";
+	const customSelectors = state.settings.customSelectors || [];
+
+	if (useCustom && customSelectors.length > 0) {
+		for (const entry of customSelectors) {
+			if (!entry.selector) continue;
+			for (const element of queryAllDeep(entry.selector)) {
+				const target = getClickableElement(element);
+				if (target && isVisibleAndEnabled(target)) {
+					return {
+						element: target,
+						label: describeElement(target, entry.label || entry.selector),
+					};
+				}
+			}
+		}
+		// Fall through to defaults if no custom match
+	}
+
 	const prioritySelectors = [
 		{ selector: "colab-connect-button", label: "colab-connect-button" },
 		{ selector: "#connect", label: "#connect" },
@@ -426,6 +469,59 @@ function isVisibleAndEnabled(element) {
 		rect.width > 0 &&
 		rect.height > 0
 	);
+}
+
+/**
+ * Checks whether the current time falls within the configured work schedule.
+ * @returns {boolean}
+ */
+function isWithinSchedule() {
+	const settings = state.settings;
+	const now = new Date();
+	const day = now.getDay();
+	const hour = now.getHours();
+	const workDays = settings.workDays || [];
+	if (workDays.length > 0 && !workDays.includes(day)) {
+		return false;
+	}
+	const start = settings.workStartHour ?? 0;
+	const end = settings.workEndHour ?? 24;
+	return hour >= start && hour < end;
+}
+
+/**
+ * Checks multi-tab coordination to avoid simultaneous clicks across tabs.
+ * @returns {Promise<{skip: boolean, reason?: string, delay?: number}>}
+ */
+async function checkMultiTabCoordination() {
+	const mode = state.settings.tabSyncMode || "independent";
+	if (mode === "independent") {
+		return { skip: false };
+	}
+	if (mode === "primary") {
+		const response = await chrome.runtime.sendMessage({
+			source: SOURCE,
+			type: "CKA_NOTIFY_COORDINATED",
+			requestId: createRequestId(),
+			payload: { url: location.href },
+		});
+		const isPrimary = response?.ok && response.data?.isPrimary;
+		if (!isPrimary) {
+			return { skip: true, reason: "not-primary" };
+		}
+		return { skip: false };
+	}
+	if (mode === "coordinated") {
+		// Spread clicks by hashing the URL to a 0–15 second delay
+		let hash = 0;
+		for (let i = 0; i < location.href.length; i++) {
+			hash = (hash << 5) - hash + location.href.charCodeAt(i);
+			hash |= 0;
+		}
+		const delay = Math.abs(hash) % 16000;
+		return { skip: false, delay };
+	}
+	return { skip: false };
 }
 
 /**
@@ -796,6 +892,25 @@ function reportError(code, message) {
 			payload: { code, message, updatedAt: Date.now() },
 		})
 		.catch(() => {});
+}
+
+/**
+ * Records a click event in lifetime statistics via the service worker.
+ * @param {"click" | "failure"} type
+ * @returns {Promise<void>}
+ */
+async function recordClickEvent(type) {
+	try {
+		const uptime = getUptime();
+		await chrome.runtime.sendMessage({
+			source: SOURCE,
+			type: "CKA_CLICK_RECORDED",
+			requestId: createRequestId(),
+			payload: { type, uptimeMs: uptime },
+		});
+	} catch (error) {
+		debugLog("Click record failed", error?.message);
+	}
 }
 
 /**

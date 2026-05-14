@@ -19,6 +19,7 @@ async function readJson(path) {
 async function loadShared() {
   const source = await readText("shared.js");
   const context = {
+    Array,
     Date,
     Math,
     Number,
@@ -76,7 +77,19 @@ test("validates and clamps persisted settings consistently", async () => {
     jitterRange: 0.15,
     keyboardShortcuts: true,
     browserNotifications: false,
-    theme: "auto"
+    theme: "auto",
+    humanizationPreset: "medium",
+    customTheme: {},
+    scheduleEnabled: false,
+    workStartHour: 9,
+    workEndHour: 18,
+    workDays: [1, 2, 3, 4, 5],
+    activeDays: [],
+    smartPause: false,
+    multiTabEnabled: false,
+    tabSyncMode: "independent",
+    customSelectors: [],
+    targetMode: "auto"
   });
 });
 
@@ -93,13 +106,27 @@ test("manifest stays MV3, narrow, and injects content scripts on canonical Colab
   const manifest = await readJson("manifest.json");
 
   assert.equal(manifest.manifest_version, 3);
+  assert.equal(manifest.version.startsWith("2."), true, "manifest version should be 2.x");
+
+  const permissions = new Set(manifest.permissions || []);
+  assert.equal(permissions.has("contextMenus"), true, "should have contextMenus permission for v2");
+
+  for (const forbidden of FORBIDDEN_PERMISSIONS) {
+    assert.equal(permissions.has(forbidden), false, `should not have ${forbidden} permission`);
+  }
 
   const expectedTypes = [
     'CKA_GET_STATUS', 'CKA_STATUS_UPDATE', 'CKA_SETTINGS_UPDATED',
     'CKA_APPLY_SETTINGS', 'CKA_TEST_CLICK', 'CKA_RECONCILE_BADGE',
-    'CKA_ERROR', 'CKA_CLEAR_ERRORS',
+    'CKA_ERROR', 'CKA_CLEAR_ERRORS', 'CKA_EXPORT_SETTINGS',
+    'CKA_IMPORT_SETTINGS', 'CKA_GET_LIFETIME_STATS', 'CKA_RESET_STATS',
+    'CKA_CLICK_RECORDED', 'CKA_NOTIFY_COORDINATED',
   ];
 
+  const shared = await readText("shared.js");
+  for (const type of expectedTypes) {
+    assert.ok(shared.includes(type), `shared.js should define ${type}`);
+  }
 });
 
 test("manifest icon paths use generated PNG files only", async () => {
@@ -121,6 +148,71 @@ test("generated icons have expected PNG dimensions", async () => {
     const buffer = await readFile(new URL(path, ROOT));
     assert.deepEqual(readPngDimensions(buffer), [size, size], path);
   }
+});
+
+test("v2 humanization presets produce expected settings", async () => {
+  const { applyHumanizationPreset, HUMANIZATION_PRESETS } = await loadShared();
+
+  for (const preset of Object.keys(HUMANIZATION_PRESETS)) {
+    const result = applyHumanizationPreset({ intervalSeconds: 60 }, preset);
+    assert.equal(typeof result.simulateActivity, "boolean", `${preset}: simulateActivity`);
+    assert.equal(typeof result.dismissDialogs, "boolean", `${preset}: dismissDialogs`);
+    assert.equal(typeof result.humanizeSignals, "boolean", `${preset}: humanizeSignals`);
+    assert.ok(result.jitterRange >= 0 && result.jitterRange <= 0.25, `${preset}: jitterRange in bounds`);
+  }
+
+  const medium = applyHumanizationPreset({}, "medium");
+  assert.equal(medium.simulateActivity, true);
+  assert.equal(medium.dismissDialogs, true);
+  assert.equal(medium.humanizeSignals, true);
+
+  const minimal = applyHumanizationPreset({}, "minimal");
+  assert.equal(minimal.simulateActivity, false);
+  assert.equal(minimal.dismissDialogs, false);
+});
+
+test("v2 settings validators work correctly", async () => {
+  const {
+    validateHumanizationPreset,
+    validateTabSyncMode,
+    validateTargetMode,
+    validateWorkDays,
+    validateCustomSelectors,
+    TAB_SYNC_MODES,
+    TARGET_MODES,
+  } = await loadShared();
+
+  assert.equal(validateHumanizationPreset("invalid"), "medium");
+  assert.equal(validateHumanizationPreset("high"), "high");
+
+  assert.equal(validateTabSyncMode("invalid"), "independent");
+  assert.ok(TAB_SYNC_MODES.includes(validateTabSyncMode("coordinated")));
+
+  assert.equal(validateTargetMode("invalid"), "auto");
+  assert.equal(validateTargetMode("custom"), "custom");
+
+  assert.deepEqual(validateWorkDays([]), []);
+  assert.deepEqual(validateWorkDays([1, 2, 3, 8, -1]), [1, 2, 3]);
+  assert.deepEqual([...validateWorkDays("not-array")], [1, 2, 3, 4, 5]);
+
+  const selectors = validateCustomSelectors([{ selector: "#test", label: "Test" }, { label: "Missing selector" }]);
+  assert.equal(selectors.length, 1);
+  assert.equal(selectors[0].selector, "#test");
+});
+
+test("lifetime stats helpers produce correct defaults", async () => {
+  const { createDefaultLifetimeStats, formatLifetimeStats } = await loadShared();
+
+  const defaults = createDefaultLifetimeStats();
+  assert.equal(defaults.totalClicks, 0);
+  assert.equal(defaults.totalFailures, 0);
+  assert.equal(defaults.totalUptimeMs, 0);
+  assert.equal(defaults.longestSessionMs, 0);
+  assert.equal(typeof defaults.firstUsedAt, "number");
+
+  const formatted = formatLifetimeStats({ totalClicks: 5, totalFailures: 1, totalUptimeMs: 3661000, longestSessionMs: 7200000 });
+  assert.ok(formatted.includes("5"));
+  assert.ok(formatted.includes("83%"));
 });
 
 test("extension pages do not use inline handlers or remote assets", async () => {

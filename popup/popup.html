@@ -49,185 +49,413 @@
         Turn automatic Colab keepalive on or off.
       </p>
 
-      <section class="panel status-panel" aria-labelledby="status-title">
-        <div class="section-header">
-          <h2 id="status-title">Status</h2>
-          <span id="status-pill" class="pill">No tabs</span>
-        </div>
-        <dl class="stats">
-          <div>
-            <dt>Colab tabs</dt>
-            <dd id="tab-count">0</dd>
-          </div>
-          <div>
-            <dt>Uptime</dt>
-            <dd id="uptime">0s</dd>
-          </div>
-          <div>
-            <dt>Last click</dt>
-            <dd id="last-click">Never</dd>
-          </div>
-          <div>
-            <dt>Failures</dt>
-            <dd id="failure-count">0</dd>
-          </div>
-        </dl>
-        <div
-          id="humanization-bar"
-          class="humanization-bar"
-          aria-label="Humanization status"
+      <nav class="tabs" role="tablist" aria-label="Popup sections">
+        <button
+          id="tab-dashboard"
+          class="tab-btn active"
+          role="tab"
+          aria-selected="true"
+          aria-controls="panel-dashboard"
         >
-          <span id="wake-lock-indicator" class="indicator" data-active="false"
-            >Wake Lock</span
-          >
-          <span id="activity-indicator" class="indicator" data-active="false"
-            >Activity</span
-          >
-          <span id="dismiss-indicator" class="indicator" data-active="false"
-            >Dismiss</span
-          >
-        </div>
-        <div id="error-message" class="error-message" hidden></div>
-      </section>
+          Dashboard
+        </button>
+        <button
+          id="tab-settings"
+          class="tab-btn"
+          role="tab"
+          aria-selected="false"
+          aria-controls="panel-settings"
+        >
+          Settings
+        </button>
+        <button
+          id="tab-advanced"
+          class="tab-btn"
+          role="tab"
+          aria-selected="false"
+          aria-controls="panel-advanced"
+        >
+          Advanced
+        </button>
+      </nav>
 
-      <section class="panel" aria-labelledby="timing-title">
-        <div class="section-header">
-          <h2 id="timing-title">Timing</h2>
-          <span
-            id="save-state"
-            class="save-state"
-            role="status"
-            aria-live="polite"
-            >Saved</span
+      <!-- Dashboard Tab -->
+      <div
+        id="panel-dashboard"
+        class="tab-panel active"
+        role="tabpanel"
+        aria-labelledby="tab-dashboard"
+      >
+        <section class="panel status-panel" aria-labelledby="status-title">
+          <div class="section-header">
+            <h2 id="status-title">Status</h2>
+            <span id="status-pill" class="pill">No tabs</span>
+          </div>
+          <dl class="stats">
+            <div>
+              <dt>Colab tabs</dt>
+              <dd id="tab-count">0</dd>
+            </div>
+            <div>
+              <dt>Uptime</dt>
+              <dd id="uptime">0s</dd>
+            </div>
+            <div>
+              <dt>Next click</dt>
+              <dd id="next-click">—</dd>
+            </div>
+            <div>
+              <dt>Last click</dt>
+              <dd id="last-click">Never</dd>
+            </div>
+            <div>
+              <dt>Failures</dt>
+              <dd id="failure-count">0</dd>
+            </div>
+          </dl>
+          <div
+            id="humanization-bar"
+            class="humanization-bar"
+            aria-label="Humanization status"
           >
-        </div>
-        <div class="interval-row">
-          <label for="interval">Check interval</label>
-          <output id="interval-output" for="interval interval-number"
-            >60s</output
-          >
-        </div>
-        <input
-          id="interval"
-          type="range"
-          min="30"
-          max="300"
-          step="5"
-          value="60"
-        />
-        <div class="number-row">
-          <label for="interval-number">Seconds</label>
+            <span id="wake-lock-indicator" class="indicator" data-active="false"
+              >Wake Lock</span
+            >
+            <span id="activity-indicator" class="indicator" data-active="false"
+              >Activity</span
+            >
+            <span id="dismiss-indicator" class="indicator" data-active="false"
+              >Dismiss</span
+            >
+          </div>
+          <div id="error-message" class="error-message" hidden></div>
+        </section>
+
+        <section class="panel stats-panel" aria-labelledby="stats-title">
+          <div class="section-header">
+            <h2 id="stats-title">Lifetime Stats</h2>
+            <button
+              id="reset-stats"
+              type="button"
+              class="icon-btn"
+              title="Reset stats"
+            >
+              ↺
+            </button>
+          </div>
+          <dl class="stats">
+            <div>
+              <dt>Total clicks</dt>
+              <dd id="total-clicks">0</dd>
+            </div>
+            <div>
+              <dt>Success rate</dt>
+              <dd id="success-rate">0%</dd>
+            </div>
+            <div>
+              <dt>Total uptime</dt>
+              <dd id="total-uptime">0s</dd>
+            </div>
+            <div>
+              <dt>Longest session</dt>
+              <dd id="longest-session">0s</dd>
+            </div>
+            <div>
+              <dt>First used</dt>
+              <dd id="first-used">Today</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="actions" aria-label="Extension actions">
+          <button id="test-click" type="button">Test Click Now</button>
+          <button id="clear-errors" type="button" class="secondary" hidden>
+            Clear Errors
+          </button>
+        </section>
+      </div>
+
+      <!-- Settings Tab -->
+      <div
+        id="panel-settings"
+        class="tab-panel"
+        role="tabpanel"
+        aria-labelledby="tab-settings"
+        hidden
+      >
+        <section class="panel" aria-labelledby="timing-title">
+          <div class="section-header">
+            <h2 id="timing-title">Timing</h2>
+            <span
+              id="save-state"
+              class="save-state"
+              role="status"
+              aria-live="polite"
+              >Saved</span
+            >
+          </div>
+          <div class="interval-row">
+            <label for="interval">Check interval</label>
+            <output id="interval-output" for="interval interval-number"
+              >60s</output
+            >
+          </div>
           <input
-            id="interval-number"
-            type="number"
+            id="interval"
+            type="range"
             min="30"
             max="300"
             step="5"
-            inputmode="numeric"
             value="60"
           />
-        </div>
-        <div class="interval-row">
-          <label for="jitter">Jitter</label>
-          <output id="jitter-output" for="jitter jitter-number">15%</output>
-        </div>
-        <input id="jitter" type="range" min="5" max="35" step="1" value="15" />
-        <div class="number-row">
-          <label for="jitter-number">Percent</label>
+          <div class="number-row">
+            <label for="interval-number">Seconds</label>
+            <input
+              id="interval-number"
+              type="number"
+              min="30"
+              max="300"
+              step="5"
+              inputmode="numeric"
+              value="60"
+            />
+          </div>
+          <div class="interval-row">
+            <label for="jitter">Jitter</label>
+            <output id="jitter-output" for="jitter jitter-number">15%</output>
+          </div>
           <input
-            id="jitter-number"
-            type="number"
+            id="jitter"
+            type="range"
             min="5"
             max="35"
             step="1"
-            inputmode="numeric"
             value="15"
           />
-        </div>
-      </section>
+          <div class="number-row">
+            <label for="jitter-number">Percent</label>
+            <input
+              id="jitter-number"
+              type="number"
+              min="5"
+              max="35"
+              step="1"
+              inputmode="numeric"
+              value="15"
+            />
+          </div>
+        </section>
 
-      <section class="panel" aria-labelledby="humanization-title">
-        <div class="section-header">
-          <h2 id="humanization-title">Humanization</h2>
-        </div>
-        <div class="toggle-list">
-          <label class="row-toggle" for="humanize-signals">
-            <span class="toggle-label">
-              <span class="toggle-title">Humanize signals</span>
-              <span class="toggle-desc">Wake lock + realistic intervals</span>
-            </span>
+        <section class="panel" aria-labelledby="schedule-title">
+          <div class="section-header">
+            <h2 id="schedule-title">Schedule</h2>
             <span class="switch switch-sm">
-              <input id="humanize-signals" type="checkbox" role="switch" />
+              <input id="schedule-enabled" type="checkbox" role="switch" />
               <span class="switch-track" aria-hidden="true"></span>
             </span>
-          </label>
-          <label class="row-toggle" for="simulate-activity">
-            <span class="toggle-label">
-              <span class="toggle-title">Simulate activity</span>
-              <span class="toggle-desc">Mouse, keyboard, scroll events</span>
-            </span>
-            <span class="switch switch-sm">
-              <input id="simulate-activity" type="checkbox" role="switch" />
-              <span class="switch-track" aria-hidden="true"></span>
-            </span>
-          </label>
-          <label class="row-toggle" for="dismiss-dialogs">
-            <span class="toggle-label">
-              <span class="toggle-title">Dismiss dialogs</span>
-              <span class="toggle-desc">Auto-close Colab alerts</span>
-            </span>
-            <span class="switch switch-sm">
-              <input id="dismiss-dialogs" type="checkbox" role="switch" />
-              <span class="switch-track" aria-hidden="true"></span>
-            </span>
-          </label>
-        </div>
-      </section>
+          </div>
+          <div class="schedule-grid" id="schedule-controls">
+            <div class="schedule-row">
+              <label for="work-start">Start</label>
+              <input id="work-start" type="number" min="0" max="23" value="9" />
+              <label for="work-end">End</label>
+              <input id="work-end" type="number" min="0" max="23" value="18" />
+            </div>
+            <div class="work-days">
+              <label><input type="checkbox" value="1" checked /> M</label>
+              <label><input type="checkbox" value="2" checked /> T</label>
+              <label><input type="checkbox" value="3" checked /> W</label>
+              <label><input type="checkbox" value="4" checked /> T</label>
+              <label><input type="checkbox" value="5" checked /> F</label>
+              <label><input type="checkbox" value="6" /> S</label>
+              <label><input type="checkbox" value="0" /> S</label>
+            </div>
+          </div>
+        </section>
 
-      <section class="panel" aria-labelledby="notifications-title">
-        <div class="section-header">
-          <h2 id="notifications-title">Notifications</h2>
-          <span
-            id="notification-perm"
-            class="pill perm-pill"
-            data-permitted="unknown"
-            >...</span
-          >
-        </div>
-        <div class="toggle-list">
-          <label class="row-toggle" for="browser-notifications">
-            <span class="toggle-label">
-              <span class="toggle-title">Browser notifications</span>
-              <span class="toggle-desc">Alerts for errors and dialogs</span>
-            </span>
+        <section class="panel" aria-labelledby="target-title">
+          <div class="section-header">
+            <h2 id="target-title">Target</h2>
             <span class="switch switch-sm">
-              <input id="browser-notifications" type="checkbox" role="switch" />
+              <input id="target-mode" type="checkbox" role="switch" />
               <span class="switch-track" aria-hidden="true"></span>
             </span>
-          </label>
-          <label class="row-toggle" for="keyboard-shortcuts">
-            <span class="toggle-label">
-              <span class="toggle-title">Keyboard shortcuts</span>
-              <span class="toggle-desc">Toggle, trigger, humanize</span>
-            </span>
-            <span class="switch switch-sm">
-              <input id="keyboard-shortcuts" type="checkbox" role="switch" />
-              <span class="switch-track" aria-hidden="true"></span>
-            </span>
-          </label>
-        </div>
-      </section>
+          </div>
+          <p class="target-desc">Use custom CSS selectors</p>
+          <div class="custom-selectors" id="custom-selectors">
+            <div class="selector-row">
+              <input
+                type="text"
+                placeholder="CSS selector"
+                value="colab-connect-button"
+              />
+              <input type="text" placeholder="Label" value="Connect button" />
+            </div>
+            <div class="selector-row">
+              <input type="text" placeholder="CSS selector" value="#connect" />
+              <input type="text" placeholder="Label" value="Connect ID" />
+            </div>
+          </div>
+        </section>
 
-      <section class="actions" aria-label="Extension actions">
-        <button id="test-click" type="button">Test Click Now</button>
-        <button id="clear-errors" type="button" class="secondary" hidden>
-          Clear Errors
-        </button>
-        <button id="save" type="button" class="secondary">Save</button>
-        <button id="reset" type="button" class="secondary danger">
-          Reset to Defaults
-        </button>
-      </section>
+        <section class="panel" aria-labelledby="humanization-title">
+          <div class="section-header">
+            <h2 id="humanization-title">Humanization</h2>
+          </div>
+          <div class="select-row">
+            <label for="humanization-preset">Preset</label>
+            <select id="humanization-preset">
+              <option value="minimal">Minimal</option>
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+              <option value="aggressive">Aggressive</option>
+            </select>
+          </div>
+          <div class="toggle-list">
+            <label class="row-toggle" for="humanize-signals">
+              <span class="toggle-label">
+                <span class="toggle-title">Humanize signals</span>
+                <span class="toggle-desc">Wake lock + realistic intervals</span>
+              </span>
+              <span class="switch switch-sm">
+                <input id="humanize-signals" type="checkbox" role="switch" />
+                <span class="switch-track" aria-hidden="true"></span>
+              </span>
+            </label>
+            <label class="row-toggle" for="simulate-activity">
+              <span class="toggle-label">
+                <span class="toggle-title">Simulate activity</span>
+                <span class="toggle-desc">Mouse, keyboard, scroll events</span>
+              </span>
+              <span class="switch switch-sm">
+                <input id="simulate-activity" type="checkbox" role="switch" />
+                <span class="switch-track" aria-hidden="true"></span>
+              </span>
+            </label>
+            <label class="row-toggle" for="dismiss-dialogs">
+              <span class="toggle-label">
+                <span class="toggle-title">Dismiss dialogs</span>
+                <span class="toggle-desc">Auto-close Colab alerts</span>
+              </span>
+              <span class="switch switch-sm">
+                <input id="dismiss-dialogs" type="checkbox" role="switch" />
+                <span class="switch-track" aria-hidden="true"></span>
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="notifications-title">
+          <div class="section-header">
+            <h2 id="notifications-title">Notifications</h2>
+            <span
+              id="notification-perm"
+              class="pill perm-pill"
+              data-permitted="unknown"
+              >...</span
+            >
+          </div>
+          <div class="toggle-list">
+            <label class="row-toggle" for="browser-notifications">
+              <span class="toggle-label">
+                <span class="toggle-title">Browser notifications</span>
+                <span class="toggle-desc">Alerts for errors and dialogs</span>
+              </span>
+              <span class="switch switch-sm">
+                <input
+                  id="browser-notifications"
+                  type="checkbox"
+                  role="switch"
+                />
+                <span class="switch-track" aria-hidden="true"></span>
+              </span>
+            </label>
+            <label class="row-toggle" for="keyboard-shortcuts">
+              <span class="toggle-label">
+                <span class="toggle-title">Keyboard shortcuts</span>
+                <span class="toggle-desc">Toggle, trigger, humanize</span>
+              </span>
+              <span class="switch switch-sm">
+                <input id="keyboard-shortcuts" type="checkbox" role="switch" />
+                <span class="switch-track" aria-hidden="true"></span>
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <section class="actions" aria-label="Extension actions">
+          <button id="save" type="button" class="secondary">Save</button>
+          <button id="reset" type="button" class="secondary danger">
+            Reset to Defaults
+          </button>
+        </section>
+      </div>
+
+      <!-- Advanced Tab -->
+      <div
+        id="panel-advanced"
+        class="tab-panel"
+        role="tabpanel"
+        aria-labelledby="tab-advanced"
+        hidden
+      >
+        <section class="panel" aria-labelledby="multitab-title">
+          <div class="section-header">
+            <h2 id="multitab-title">Multi-Tab</h2>
+            <span class="switch switch-sm">
+              <input id="multi-tab-enabled" type="checkbox" role="switch" />
+              <span class="switch-track" aria-hidden="true"></span>
+            </span>
+          </div>
+          <div id="multitab-controls">
+            <div class="select-row">
+              <label for="tab-sync-mode">Sync mode</label>
+              <select id="tab-sync-mode">
+                <option value="independent">Independent</option>
+                <option value="coordinated">Coordinated</option>
+                <option value="primary">Primary only</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="theme-title">
+          <div class="section-header">
+            <h2 id="theme-title">Appearance</h2>
+          </div>
+          <div class="theme-grid">
+            <div class="color-row">
+              <label for="theme-accent">Accent</label>
+              <input id="theme-accent" type="color" value="#1a73e8" />
+            </div>
+            <div class="color-row">
+              <label for="theme-bg">Background</label>
+              <input id="theme-bg" type="color" value="#f6f7f9" />
+            </div>
+            <div class="color-row">
+              <label for="theme-fg">Text</label>
+              <input id="theme-fg" type="color" value="#202124" />
+            </div>
+            <button id="reset-theme" type="button" class="secondary">
+              Reset Colors
+            </button>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="backup-title">
+          <div class="section-header">
+            <h2 id="backup-title">Backup & Restore</h2>
+          </div>
+          <div class="backup-actions">
+            <button id="export-settings" type="button">Export Settings</button>
+            <button id="import-settings" type="button" class="secondary">
+              Import Settings
+            </button>
+            <input id="import-file" type="file" accept=".json" hidden />
+          </div>
+        </section>
+      </div>
     </main>
     <script src="../shared.js"></script>
     <script src="popup.js"></script>

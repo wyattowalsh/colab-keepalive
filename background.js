@@ -11,11 +11,14 @@ const {
 	okResponse,
 	validateMessage,
 	validateSettings,
+	createDefaultLifetimeStats,
+	formatLifetimeStats,
 } = globalThis.ColabKeepaliveShared;
 const ALARM_NAME = "colab-keepalive-reconcile";
 const RECONCILE_INTERVAL_MINUTES = 5;
 const SESSION_STATUS_KEY = "tabStatuses";
 const SESSION_UPTIME_KEY = "aggregateUptime";
+const LIFETIME_STATS_KEY = "lifetimeStats";
 const NOTIFICATION_ID_PREFIX = "colab-keepalive-";
 const COLAB_URL_PATTERNS = [
 	"https://colab.research.google.com/*",
@@ -56,6 +59,10 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 	}
 });
 
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+	void handleContextMenuClick(info, tab);
+});
+
 chrome.tabs.onRemoved.addListener((tabId) => {
 	void removeTabStatus(tabId);
 });
@@ -76,6 +83,7 @@ async function initializeExtension() {
 	await setDefaultSettings();
 	await ensureReconciliationAlarm();
 	await reconcileTabsAndBadge();
+	createContextMenus();
 }
 
 /**
@@ -164,6 +172,50 @@ async function handleRuntimeMessage(message, sender) {
 			}
 			await updateBadge();
 			return okResponse({ cleared: true });
+		}
+		case "CKA_CLICK_RECORDED": {
+			if (hasTabSender && !validateSender(sender)) {
+				return errorResponse(
+					"INVALID_SENDER",
+					"Rejected click record from non-Colab sender",
+				);
+			}
+			await recordClickEvent(payload);
+			return okResponse({ recorded: true });
+		}
+		case "CKA_GET_LIFETIME_STATS": {
+			const stats = await getLifetimeStats();
+			return okResponse({ stats, formatted: formatLifetimeStats(stats) });
+		}
+		case "CKA_RESET_STATS": {
+			await resetLifetimeStats();
+			return okResponse({ reset: true });
+		}
+		case "CKA_EXPORT_SETTINGS": {
+			const settings = await getSettings();
+			return okResponse({ settings });
+		}
+		case "CKA_IMPORT_SETTINGS": {
+			const imported = payload?.settings;
+			if (!imported || typeof imported !== "object") {
+				return errorResponse("INVALID_IMPORT", "Invalid settings object");
+			}
+			const validated = validateSettings(imported);
+			await chrome.storage.sync.set(validated);
+			await fanOutSettings(validated);
+			return okResponse({ settings: validated });
+		}
+		case "CKA_NOTIFY_COORDINATED": {
+			const url = payload?.url || sender?.tab?.url || "";
+			const tabs = await queryColabTabs();
+			// The primary tab is the first active tab, or the first tab overall
+			const activeTabs = tabs.filter((t) => t.active);
+			const primary = activeTabs[0] || tabs[0];
+			const isPrimary = primary ? sender?.tab?.id === primary.id : false;
+			return okResponse({
+				isPrimary: Boolean(isPrimary),
+				tabCount: tabs.length,
+			});
 		}
 		default:
 			return errorResponse("UNKNOWN_TYPE", `Unsupported message type: ${type}`);
@@ -511,6 +563,11 @@ function aggregateStatus(statuses) {
 			.map((status) => Number(status.lastClickAt || 0))
 			.filter(Boolean)
 			.sort((a, b) => b - a)[0] || null;
+	const nextClickAt =
+		statuses
+			.map((status) => Number(status.nextClickAt || 0))
+			.filter(Boolean)
+			.sort((a, b) => a - b)[0] || null;
 	const totalUptimeMs = statuses.reduce(
 		(sum, status) => sum + Number(status.uptimeMs || 0),
 		0,
@@ -535,6 +592,7 @@ function aggregateStatus(statuses) {
 		state,
 		failureCount,
 		lastClickAt,
+		nextClickAt,
 		lastError,
 		totalUptimeMs,
 		totalUptimeFormatted:
@@ -555,6 +613,82 @@ async function ensureReconciliationAlarm() {
 		await chrome.alarms.create(ALARM_NAME, {
 			periodInMinutes: RECONCILE_INTERVAL_MINUTES,
 		});
+	}
+}
+
+// ── Context Menu ────────────────────────────────────────────────────────────
+
+/**
+ * Creates the extension context menu items.
+ * @returns {void}
+ */
+function createContextMenus() {
+	chrome.contextMenus.removeAll(() => {
+		chrome.contextMenus.create({
+			id: "cka-toggle",
+			title: "Toggle Keepalive",
+			contexts: ["page", "action"],
+			documentUrlPatterns: COLAB_URL_PATTERNS,
+		});
+		chrome.contextMenus.create({
+			id: "cka-click-now",
+			title: "Click Now",
+			contexts: ["page", "action"],
+			documentUrlPatterns: COLAB_URL_PATTERNS,
+		});
+		chrome.contextMenus.create({
+			id: "cka-separator-1",
+			type: "separator",
+			contexts: ["page", "action"],
+			documentUrlPatterns: COLAB_URL_PATTERNS,
+		});
+		chrome.contextMenus.create({
+			id: "cka-open-settings",
+			title: "Open Settings",
+			contexts: ["page", "action"],
+			documentUrlPatterns: COLAB_URL_PATTERNS,
+		});
+	});
+}
+
+/**
+ * Handles context menu clicks.
+ * @param {chrome.contextMenus.OnClickData} info
+ * @param {chrome.tabs.Tab | undefined} tab
+ * @returns {Promise<void>}
+ */
+async function handleContextMenuClick(info, tab) {
+	const settings = await getSettings();
+	switch (info.menuItemId) {
+		case "cka-toggle": {
+			const next = { enabled: !settings.enabled };
+			await chrome.storage.sync.set(next);
+			await fanOutSettings({ ...settings, ...next });
+			await updateBadge({ ...settings, ...next });
+			break;
+		}
+		case "cka-click-now": {
+			if (tab?.id) {
+				const response = await sendMessageToTab(tab.id, {
+					source: SOURCE,
+					type: "CKA_TEST_CLICK",
+					requestId: createRequestId(),
+					payload: {},
+				});
+				if (!response?.ok) {
+					console.warn(
+						LOG_PREFIX,
+						"Context-menu click failed",
+						response?.error,
+					);
+				}
+			}
+			break;
+		}
+		case "cka-open-settings": {
+			void chrome.runtime.openOptionsPage?.() || chrome.action.openPopup?.();
+			break;
+		}
 	}
 }
 
@@ -674,6 +808,52 @@ async function getAggregateUptime() {
 		totalUptimeFormatted: globalThis.ColabKeepaliveShared.formatUptime(totalMs),
 		tabCount,
 	};
+}
+
+// ── Lifetime Statistics ────────────────────────────────────────────────────
+
+/**
+ * Records a click event in lifetime statistics.
+ * @param {{type: string, uptimeMs?: number}} [payload]
+ * @returns {Promise<void>}
+ */
+async function recordClickEvent(payload = {}) {
+	const { [LIFETIME_STATS_KEY]: existing = {} } =
+		await chrome.storage.local.get(LIFETIME_STATS_KEY);
+	const stats = { ...createDefaultLifetimeStats(), ...existing };
+	if (payload.type === "click") {
+		stats.totalClicks = (stats.totalClicks || 0) + 1;
+	} else if (payload.type === "failure") {
+		stats.totalFailures = (stats.totalFailures || 0) + 1;
+	}
+	if (payload.uptimeMs && payload.uptimeMs > 0) {
+		stats.totalUptimeMs = (stats.totalUptimeMs || 0) + payload.uptimeMs;
+		const currentLongest = stats.longestSessionMs || 0;
+		if (payload.uptimeMs > currentLongest) {
+			stats.longestSessionMs = payload.uptimeMs;
+		}
+	}
+	await chrome.storage.local.set({ [LIFETIME_STATS_KEY]: stats });
+}
+
+/**
+ * Returns lifetime statistics from local storage.
+ * @returns {Promise<Record<string, number>>}
+ */
+async function getLifetimeStats() {
+	const { [LIFETIME_STATS_KEY]: stats } =
+		await chrome.storage.local.get(LIFETIME_STATS_KEY);
+	return { ...createDefaultLifetimeStats(), ...stats };
+}
+
+/**
+ * Resets lifetime statistics to defaults.
+ * @returns {Promise<void>}
+ */
+async function resetLifetimeStats() {
+	await chrome.storage.local.set({
+		[LIFETIME_STATS_KEY]: createDefaultLifetimeStats(),
+	});
 }
 
 /**
