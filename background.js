@@ -669,7 +669,7 @@ async function handleContextMenuClick(info, tab) {
 		}
 		case "cka-click-now": {
 			if (tab?.id) {
-				const response = await sendMessageToTab(tab.id, {
+				const response = await sendToTabSafely(tab.id, {
 					source: SOURCE,
 					type: "CKA_TEST_CLICK",
 					requestId: createRequestId(),
