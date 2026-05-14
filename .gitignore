@@ -21,6 +21,12 @@ __pycache__/
 !icon.png
 !icons/*.png
 
+# IDE
+.vscode/
+
+# build artifacts
+*.zip
+
 # misc
 .DS_Store
 *.pem
