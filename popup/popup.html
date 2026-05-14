@@ -385,7 +385,7 @@
         </section>
 
         <section class="actions" aria-label="Extension actions">
-          <button id="save" type="button" class="secondary">Save</button>
+          <button id="save" type="button" disabled>Save</button>
           <button id="reset" type="button" class="secondary danger">
             Reset to Defaults
           </button>
@@ -448,15 +448,23 @@
             <h2 id="backup-title">Backup & Restore</h2>
           </div>
           <div class="backup-actions">
-            <button id="export-settings" type="button">Export Settings</button>
-            <button id="import-settings" type="button" class="secondary">
-              Import Settings
+            <button id="copy-json" type="button">Copy JSON</button>
+            <button id="paste-json" type="button" class="secondary">
+              Paste JSON
             </button>
-            <input id="import-file" type="file" accept=".json" hidden />
           </div>
         </section>
       </div>
     </main>
+    <footer class="popup-footer">
+      <a
+        id="repo-link"
+        href="https://github.com/ww/colab-keepalive"
+        target="_blank"
+        rel="noopener noreferrer"
+        >GitHub</a
+      >
+    </footer>
     <script src="../shared.js"></script>
     <script src="popup.js"></script>
   </body>

@@ -49,9 +49,8 @@ const elements = {
 	longestSession: document.getElementById("longest-session"),
 	firstUsed: document.getElementById("first-used"),
 	resetStats: document.getElementById("reset-stats"),
-	exportSettings: document.getElementById("export-settings"),
-	importSettings: document.getElementById("import-settings"),
-	importFile: document.getElementById("import-file"),
+	copyJson: document.getElementById("copy-json"),
+	pasteJson: document.getElementById("paste-json"),
 	tabDashboard: document.getElementById("tab-dashboard"),
 	tabSettings: document.getElementById("tab-settings"),
 	tabAdvanced: document.getElementById("tab-advanced"),
@@ -78,6 +77,7 @@ const state = {
 	settings: { ...DEFAULT_SETTINGS },
 	saveTimer: null,
 	isSaving: false,
+	isDirty: false,
 	activeTabCount: 0,
 	countdownTimer: null,
 	nextClickAt: null,
@@ -152,53 +152,55 @@ document.addEventListener("DOMContentLoaded", () => {
 function wireEvents() {
 	elements.enabled.addEventListener("change", () => {
 		state.settings.enabled = elements.enabled.checked;
-		scheduleSave();
+		markDirty();
 	});
 
 	elements.interval.addEventListener("input", () =>
-		syncIntervalInputs(elements.interval.value, true),
+		syncIntervalInputs(elements.interval.value),
 	);
 	elements.intervalNumber.addEventListener("input", () =>
-		syncIntervalInputs(elements.intervalNumber.value, true),
+		syncIntervalInputs(elements.intervalNumber.value),
 	);
-	elements.intervalNumber.addEventListener("change", () =>
-		syncIntervalInputs(elements.intervalNumber.value, true, true),
-	);
+	elements.intervalNumber.addEventListener("change", () => {
+		syncIntervalInputs(elements.intervalNumber.value);
+		markDirty();
+	});
 
 	elements.jitter.addEventListener("input", () =>
-		syncJitterInputs(elements.jitter.value, true),
+		syncJitterInputs(elements.jitter.value),
 	);
 	elements.jitterNumber.addEventListener("input", () =>
-		syncJitterInputs(elements.jitterNumber.value, true),
+		syncJitterInputs(elements.jitterNumber.value),
 	);
-	elements.jitterNumber.addEventListener("change", () =>
-		syncJitterInputs(elements.jitterNumber.value, true, true),
-	);
+	elements.jitterNumber.addEventListener("change", () => {
+		syncJitterInputs(elements.jitterNumber.value);
+		markDirty();
+	});
 
 	elements.humanizeSignals.addEventListener("change", () => {
 		state.settings.humanizeSignals = elements.humanizeSignals.checked;
-		scheduleSave();
+		markDirty();
 	});
 	elements.simulateActivity.addEventListener("change", () => {
 		state.settings.simulateActivity = elements.simulateActivity.checked;
-		scheduleSave();
+		markDirty();
 	});
 	elements.dismissDialogs.addEventListener("change", () => {
 		state.settings.dismissDialogs = elements.dismissDialogs.checked;
-		scheduleSave();
+		markDirty();
 	});
 	elements.browserNotifications.addEventListener("change", () => {
 		state.settings.browserNotifications = elements.browserNotifications.checked;
-		scheduleSave();
+		markDirty();
 	});
 	elements.keyboardShortcuts.addEventListener("change", () => {
 		state.settings.keyboardShortcuts = elements.keyboardShortcuts.checked;
-		scheduleSave();
+		markDirty();
 	});
 
 	elements.humanizationPreset.addEventListener("change", () => {
 		state.settings.humanizationPreset = elements.humanizationPreset.value;
-		scheduleSave();
+		markDirty();
 	});
 
 	elements.themeToggle.addEventListener("click", () => {
@@ -206,28 +208,22 @@ function wireEvents() {
 		state.settings.theme = next;
 		applyTheme(next);
 		elements.themeToggle.textContent = themeIcon(next);
-		scheduleSave();
+		markDirty();
 	});
 
 	elements.save.addEventListener("click", () => void saveSettingsNow());
 	elements.reset.addEventListener("click", () => {
 		state.settings = { ...DEFAULT_SETTINGS };
 		applySettingsToUi(DEFAULT_SETTINGS);
-		void saveSettingsNow();
+		markDirty();
 	});
 	elements.testClick.addEventListener("click", () => void testClickNow());
 	elements.clearErrors.addEventListener("click", () => void clearErrorsNow());
 	elements.resetStats.addEventListener("click", () => void resetStatsNow());
-	elements.exportSettings.addEventListener(
+	elements.copyJson.addEventListener("click", () => void copyJsonToClipboard());
+	elements.pasteJson.addEventListener(
 		"click",
-		() => void exportSettingsNow(),
-	);
-	elements.importSettings.addEventListener("click", () =>
-		elements.importFile.click(),
-	);
-	elements.importFile.addEventListener(
-		"change",
-		(event) => void importSettingsNow(event),
+		() => void pasteJsonFromClipboard(),
 	);
 
 	elements.scheduleEnabled.addEventListener("change", () => {
@@ -236,22 +232,22 @@ function wireEvents() {
 			"disabled",
 			!elements.scheduleEnabled.checked,
 		);
-		scheduleSave();
+		markDirty();
 	});
 	elements.workStart.addEventListener("change", () => {
 		state.settings.workStartHour = clampHour(elements.workStart.value);
-		scheduleSave();
+		markDirty();
 	});
 	elements.workEnd.addEventListener("change", () => {
 		state.settings.workEndHour = clampHour(elements.workEnd.value);
-		scheduleSave();
+		markDirty();
 	});
 	for (const cb of elements.workDays) {
 		cb.addEventListener("change", () => {
 			state.settings.workDays = Array.from(elements.workDays)
 				.filter((c) => c.checked)
 				.map((c) => Number(c.value));
-			scheduleSave();
+			markDirty();
 		});
 	}
 
@@ -261,11 +257,11 @@ function wireEvents() {
 			"disabled",
 			!elements.multiTabEnabled.checked,
 		);
-		scheduleSave();
+		markDirty();
 	});
 	elements.tabSyncMode.addEventListener("change", () => {
 		state.settings.tabSyncMode = elements.tabSyncMode.value;
-		scheduleSave();
+		markDirty();
 	});
 	elements.targetMode.addEventListener("change", () => {
 		state.settings.targetMode = elements.targetMode.checked ? "custom" : "auto";
@@ -273,32 +269,32 @@ function wireEvents() {
 			"disabled",
 			!elements.targetMode.checked,
 		);
-		scheduleSave();
+		markDirty();
 	});
 
 	elements.themeAccent.addEventListener("input", () => {
 		state.settings.customTheme = state.settings.customTheme || {};
 		state.settings.customTheme.accent = elements.themeAccent.value;
 		applyCustomTheme(state.settings.customTheme);
-		scheduleSave();
+		markDirty();
 	});
 	elements.themeBg.addEventListener("input", () => {
 		state.settings.customTheme = state.settings.customTheme || {};
 		state.settings.customTheme.bg = elements.themeBg.value;
 		applyCustomTheme(state.settings.customTheme);
-		scheduleSave();
+		markDirty();
 	});
 	elements.themeFg.addEventListener("input", () => {
 		state.settings.customTheme = state.settings.customTheme || {};
 		state.settings.customTheme.fg = elements.themeFg.value;
 		applyCustomTheme(state.settings.customTheme);
-		scheduleSave();
+		markDirty();
 	});
 	elements.resetTheme.addEventListener("click", () => {
 		state.settings.customTheme = {};
 		applyCustomTheme({});
 		applySettingsToUi(state.settings);
-		scheduleSave();
+		markDirty();
 	});
 
 	elements.tabDashboard.addEventListener("click", () => switchTab("dashboard"));
@@ -376,42 +372,37 @@ async function fetchLifetimeStats() {
 }
 
 /** @returns {Promise<void>} */
-async function exportSettingsNow() {
-	elements.exportSettings.disabled = true;
-	elements.exportSettings.textContent = "Exporting...";
-	const response = await sendRuntimeMessage("CKA_EXPORT_SETTINGS", {});
-	if (!response.ok) {
-		renderError(response.error?.message || "Could not export settings");
-		elements.exportSettings.textContent = "Export Settings";
-		elements.exportSettings.disabled = false;
-		return;
+async function copyJsonToClipboard() {
+	elements.copyJson.disabled = true;
+	elements.copyJson.textContent = "Copying...";
+	try {
+		const response = await sendRuntimeMessage("CKA_EXPORT_SETTINGS", {});
+		if (!response.ok) {
+			renderError(response.error?.message || "Could not export settings");
+			return;
+		}
+		const json = JSON.stringify(response.data.settings, null, 2);
+		await navigator.clipboard.writeText(json);
+		elements.saveState.textContent = "Copied";
+	} catch (error) {
+		renderError(error?.message || "Copy failed");
+	} finally {
+		elements.copyJson.textContent = "Copy JSON";
+		elements.copyJson.disabled = false;
 	}
-	const blob = new Blob([JSON.stringify(response.data.settings, null, 2)], {
-		type: "application/json",
-	});
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = `colab-keepalive-settings-${new Date().toISOString().split("T")[0]}.json`;
-	a.click();
-	URL.revokeObjectURL(url);
-	elements.saveState.textContent = "Exported";
-	elements.exportSettings.textContent = "Export Settings";
-	elements.exportSettings.disabled = false;
 }
 
-/**
- * @param {Event} event
- * @returns {Promise<void>}
- */
-async function importSettingsNow(event) {
-	const file = event.target.files?.[0];
-	if (!file) return;
-	elements.importSettings.disabled = true;
-	elements.importSettings.textContent = "Importing...";
+/** @returns {Promise<void>} */
+async function pasteJsonFromClipboard() {
+	elements.pasteJson.disabled = true;
+	elements.pasteJson.textContent = "Pasting...";
 	try {
-		const text = await file.text();
-		const parsed = JSON.parse(text);
+		const json = await navigator.clipboard.readText();
+		if (!json || !json.trim()) {
+			renderError("Clipboard is empty");
+			return;
+		}
+		const parsed = JSON.parse(json);
 		const response = await sendRuntimeMessage("CKA_IMPORT_SETTINGS", {
 			settings: parsed,
 		});
@@ -420,14 +411,14 @@ async function importSettingsNow(event) {
 		} else {
 			state.settings = validateSettings(response.data.settings);
 			applySettingsToUi(state.settings);
-			elements.saveState.textContent = "Imported";
+			elements.saveState.textContent = "Pasted";
 		}
 	} catch (error) {
-		renderError(error?.message || "Invalid settings file");
+		renderError(error?.message || "Paste failed");
+	} finally {
+		elements.pasteJson.textContent = "Paste JSON";
+		elements.pasteJson.disabled = false;
 	}
-	elements.importSettings.textContent = "Import Settings";
-	elements.importSettings.disabled = false;
-	elements.importFile.value = "";
 }
 
 /** @returns {Promise<void>} */
@@ -446,7 +437,7 @@ async function refreshStatus() {
 		version,
 	} = response.data;
 
-	if (!state.saveTimer && !state.isSaving) {
+	if (!state.isDirty) {
 		state.settings = validateSettings(settings);
 		applySettingsToUi(state.settings);
 	}
@@ -459,10 +450,6 @@ async function refreshStatus() {
 
 /** @returns {Promise<void>} */
 async function saveSettingsNow() {
-	if (state.saveTimer) {
-		window.clearTimeout(state.saveTimer);
-		state.saveTimer = null;
-	}
 	state.isSaving = true;
 	elements.saveState.textContent = "Saving";
 	const response = await sendRuntimeMessage("CKA_APPLY_SETTINGS", {
@@ -476,19 +463,22 @@ async function saveSettingsNow() {
 	}
 	state.settings = validateSettings(response.data.settings);
 	applySettingsToUi(state.settings);
+	clearDirty();
 	elements.saveState.textContent = "Saved";
 	await refreshStatus();
 }
 
 /** @returns {void} */
-function scheduleSave() {
+function markDirty() {
+	state.isDirty = true;
 	elements.saveState.textContent = "Unsaved";
-	if (state.saveTimer) {
-		window.clearTimeout(state.saveTimer);
-	}
-	state.saveTimer = window.setTimeout(() => {
-		void saveSettingsNow();
-	}, 300);
+	elements.save.disabled = false;
+}
+
+/** @returns {void} */
+function clearDirty() {
+	state.isDirty = false;
+	elements.save.disabled = true;
 }
 
 /** @returns {Promise<void>} */
@@ -527,7 +517,7 @@ async function clearErrorsNow() {
  * @param {boolean} [forceClamp]
  * @returns {void}
  */
-function syncIntervalInputs(rawValue, shouldSave, forceClamp = false) {
+function syncIntervalInputs(rawValue, forceClamp = false) {
 	const min =
 		state.settings.minIntervalSeconds || DEFAULT_SETTINGS.minIntervalSeconds;
 	const max =
@@ -545,18 +535,14 @@ function syncIntervalInputs(rawValue, shouldSave, forceClamp = false) {
 	elements.interval.value = String(value);
 	elements.intervalNumber.value = String(value);
 	elements.intervalOutput.textContent = `${value}s`;
-	if (shouldSave) {
-		scheduleSave();
-	}
 }
 
 /**
  * @param {string | number} rawValue
- * @param {boolean} shouldSave
  * @param {boolean} [forceClamp]
  * @returns {void}
  */
-function syncJitterInputs(rawValue, shouldSave, forceClamp = false) {
+function syncJitterInputs(rawValue, forceClamp = false) {
 	let value = Number(rawValue);
 	if (!Number.isFinite(value)) {
 		value = Math.round(DEFAULT_SETTINGS.jitterRange * 100);
@@ -573,9 +559,6 @@ function syncJitterInputs(rawValue, shouldSave, forceClamp = false) {
 	elements.jitter.value = String(value);
 	elements.jitterNumber.value = String(value);
 	elements.jitterOutput.textContent = `${value}%`;
-	if (shouldSave) {
-		scheduleSave();
-	}
 }
 
 /**
