@@ -156,6 +156,15 @@ async function handleRuntimeMessage(message, sender) {
 			}
 			return okResponse({ recorded: true });
 		}
+		case "CKA_CLEAR_ERRORS": {
+			if (hasTabSender) {
+				await clearTabErrors(sender.tab.id);
+			} else {
+				await clearAllErrors();
+			}
+			await updateBadge();
+			return okResponse({ cleared: true });
+		}
 		default:
 			return errorResponse("UNKNOWN_TYPE", `Unsupported message type: ${type}`);
 	}
@@ -317,6 +326,9 @@ async function testClickOpenColabTab() {
 		requestId: createRequestId(),
 		payload: { manual: true },
 	});
+	if (result?.ok) {
+		await clearTabErrors(target.id);
+	}
 	await updateBadge();
 	if (!result?.ok) {
 		return result || errorResponse("TEST_CLICK_FAILED", "Test click failed");
@@ -353,6 +365,41 @@ async function removeTabStatus(tabId) {
 	delete statuses[String(tabId)];
 	await chrome.storage.session.set({ [SESSION_STATUS_KEY]: statuses });
 	await updateBadge();
+}
+
+/**
+ * Clears error and warning state for a specific tab.
+ * @param {number} tabId
+ * @returns {Promise<void>}
+ */
+async function clearTabErrors(tabId) {
+	const { [SESSION_STATUS_KEY]: statuses = {} } =
+		await chrome.storage.session.get(SESSION_STATUS_KEY);
+	const existing = statuses[String(tabId)];
+	if (!existing) return;
+	delete existing.state;
+	delete existing.warning;
+	delete existing.lastError;
+	existing.failureCount = 0;
+	existing.clearedAt = Date.now();
+	await chrome.storage.session.set({ [SESSION_STATUS_KEY]: statuses });
+}
+
+/**
+ * Clears error and warning state for all tracked tabs.
+ * @returns {Promise<void>}
+ */
+async function clearAllErrors() {
+	const { [SESSION_STATUS_KEY]: statuses = {} } =
+		await chrome.storage.session.get(SESSION_STATUS_KEY);
+	for (const key of Object.keys(statuses)) {
+		delete statuses[key].state;
+		delete statuses[key].warning;
+		delete statuses[key].lastError;
+		statuses[key].failureCount = 0;
+		statuses[key].clearedAt = Date.now();
+	}
+	await chrome.storage.session.set({ [SESSION_STATUS_KEY]: statuses });
 }
 
 /**
@@ -482,10 +529,13 @@ function aggregateStatus(statuses) {
 			: statuses.length > 0
 				? "ready"
 				: "no-tabs";
+	const lastError =
+		statuses.find((status) => status.lastError)?.lastError || null;
 	return {
 		state,
 		failureCount,
 		lastClickAt,
+		lastError,
 		totalUptimeMs,
 		totalUptimeFormatted:
 			globalThis.ColabKeepaliveShared.formatUptime(totalUptimeMs),

@@ -38,6 +38,8 @@ const elements = {
 	wakeLockIndicator: document.getElementById("wake-lock-indicator"),
 	activityIndicator: document.getElementById("activity-indicator"),
 	dismissIndicator: document.getElementById("dismiss-indicator"),
+	clearErrors: document.getElementById("clear-errors"),
+	errorMessage: document.getElementById("error-message"),
 };
 
 const state = {
@@ -148,6 +150,7 @@ function wireEvents() {
 		void saveSettingsNow();
 	});
 	elements.testClick.addEventListener("click", () => void testClickNow());
+	elements.clearErrors.addEventListener("click", () => void clearErrorsNow());
 }
 
 /** @returns {Promise<void>} */
@@ -223,6 +226,21 @@ async function testClickNow() {
 	await refreshStatus();
 	elements.testClick.textContent = "Test Click Now";
 	elements.testClick.disabled = state.activeTabCount === 0;
+}
+
+/** @returns {Promise<void>} */
+async function clearErrorsNow() {
+	elements.clearErrors.disabled = true;
+	elements.clearErrors.textContent = "Clearing...";
+	const response = await sendRuntimeMessage("CKA_CLEAR_ERRORS", {});
+	if (!response.ok) {
+		renderError(response.error?.message || "Could not clear errors");
+	} else {
+		elements.saveState.textContent = "Cleared";
+	}
+	await refreshStatus();
+	elements.clearErrors.textContent = "Clear Errors";
+	elements.clearErrors.disabled = false;
 }
 
 /**
@@ -374,6 +392,16 @@ function renderStatus(
 		elements.notificationPerm.setAttribute("data-permitted", "unknown");
 		elements.notificationPerm.textContent = "...";
 	}
+
+	const hasError = stateName === "error" || stateName === "warning";
+	elements.clearErrors.hidden = !hasError;
+	if (hasError && aggregateStatus.lastError) {
+		elements.errorMessage.textContent = String(aggregateStatus.lastError);
+		elements.errorMessage.hidden = false;
+	} else {
+		elements.errorMessage.hidden = true;
+		elements.errorMessage.textContent = "";
+	}
 }
 
 /** @param {string} message */
@@ -382,6 +410,8 @@ function renderError(message) {
 	elements.uptime.textContent = "—";
 	elements.statusPill.textContent = "Error";
 	elements.statusPill.className = "pill error";
+	elements.errorMessage.textContent = message;
+	elements.errorMessage.hidden = false;
 }
 
 /**

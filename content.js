@@ -115,6 +115,10 @@ async function handleMessage(message) {
 			const result = await keepAliveTick({ manual: true });
 			return result.ok ? okResponse(result.data) : result;
 		}
+		case "CKA_CLEAR_ERRORS": {
+			clearLocalErrors();
+			return okResponse(buildStatus("cleared"));
+		}
 		case "CKA_RECONCILE_BADGE":
 		case "CKA_STATUS_UPDATE":
 		case "CKA_ERROR":
@@ -679,6 +683,17 @@ function recordFailure(code, message) {
 	state.lastError = `${code}: ${message}`;
 	state.warning = state.failureCount >= state.settings.failureWarningThreshold;
 	debugLog("Failure", state.failureCount, state.lastError);
+}
+
+/**
+ * Clears local error and warning state.
+ * @returns {void}
+ */
+function clearLocalErrors() {
+	state.failureCount = 0;
+	state.lastError = null;
+	state.warning = false;
+	debugLog("Errors cleared");
 }
 
 /**
