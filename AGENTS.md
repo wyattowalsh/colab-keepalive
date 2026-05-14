@@ -30,6 +30,8 @@
 - Valid message types are `CKA_GET_STATUS`, `CKA_STATUS_UPDATE`, `CKA_SETTINGS_UPDATED`, `CKA_APPLY_SETTINGS`, `CKA_TEST_CLICK`, `CKA_RECONCILE_BADGE`, and `CKA_ERROR`.
 - All handlers must return `{ ok: boolean, data?: any, error?: { code: string, message: string } }`.
 - Background handlers must validate content-script senders against the allowed Colab origins before trusting tab status or error messages.
+- Keep shared protocol constants, settings validation, response helpers, request ID creation, and Connect/Reconnect label classification in `shared.js`.
+- Load `shared.js` before `content.js` and `popup.js`; import it at the top of the module service worker.
 
 ## Coding Conventions
 

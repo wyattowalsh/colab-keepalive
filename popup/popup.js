@@ -1,15 +1,12 @@
 "use strict";
 
-const SOURCE = "colab-keepalive";
-const LOG_PREFIX = "[Colab-Keepalive]";
-const DEFAULT_SETTINGS = Object.freeze({
-  enabled: true,
-  intervalSeconds: 60,
-  minIntervalSeconds: 30,
-  maxIntervalSeconds: 300,
-  failureWarningThreshold: 3,
-  debugLogging: false
-});
+const {
+  DEFAULT_SETTINGS,
+  LOG_PREFIX,
+  SOURCE,
+  createRequestId,
+  validateSettings
+} = globalThis.ColabKeepaliveShared;
 const elements = {
   enabled: document.getElementById("enabled"),
   interval: document.getElementById("interval"),
@@ -237,48 +234,6 @@ async function sendRuntimeMessage(type, payload) {
 }
 
 /**
- * Validates and clamps settings locally for display.
- * @param {Record<string, unknown>} input
- * @returns {typeof DEFAULT_SETTINGS}
- */
-function validateSettings(input = {}) {
-  const minIntervalSeconds = validNumber(input.minIntervalSeconds, DEFAULT_SETTINGS.minIntervalSeconds, 5, 3600);
-  const maxIntervalSeconds = Math.max(
-    minIntervalSeconds,
-    validNumber(input.maxIntervalSeconds, DEFAULT_SETTINGS.maxIntervalSeconds, minIntervalSeconds, 3600)
-  );
-  return {
-    enabled: typeof input.enabled === "boolean" ? input.enabled : DEFAULT_SETTINGS.enabled,
-    intervalSeconds: validNumber(input.intervalSeconds, DEFAULT_SETTINGS.intervalSeconds, minIntervalSeconds, maxIntervalSeconds),
-    minIntervalSeconds,
-    maxIntervalSeconds,
-    failureWarningThreshold: validNumber(
-      input.failureWarningThreshold,
-      DEFAULT_SETTINGS.failureWarningThreshold,
-      1,
-      20
-    ),
-    debugLogging: typeof input.debugLogging === "boolean" ? input.debugLogging : DEFAULT_SETTINGS.debugLogging
-  };
-}
-
-/**
- * Returns a bounded integer.
- * @param {unknown} value
- * @param {number} fallback
- * @param {number} min
- * @param {number} max
- * @returns {number}
- */
-function validNumber(value, fallback, min, max) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return fallback;
-  }
-  return Math.min(max, Math.max(min, Math.round(numeric)));
-}
-
-/**
  * Formats a timestamp for compact popup display.
  * @param {number} timestamp
  * @returns {string}
@@ -346,12 +301,4 @@ function pillClass(stateName) {
     return "ok";
   }
   return "";
-}
-
-/**
- * Creates a protocol request identifier.
- * @returns {string}
- */
-function createRequestId() {
-  return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }

@@ -1,18 +1,19 @@
 "use strict";
 
-const SOURCE = "colab-keepalive";
-const LOG_PREFIX = "[Colab-Keepalive]";
+const {
+  DEFAULT_SETTINGS,
+  LOG_PREFIX,
+  SOURCE,
+  classifyConnectLabel,
+  createRequestId,
+  errorResponse,
+  okResponse,
+  validateMessage,
+  validateSettings
+} = globalThis.ColabKeepaliveShared;
 const MAX_SHADOW_DEPTH = 8;
 const MAX_ROOTS = 80;
 const MAX_TEXT_BUTTONS = 250;
-const DEFAULT_SETTINGS = Object.freeze({
-  enabled: true,
-  intervalSeconds: 60,
-  minIntervalSeconds: 30,
-  maxIntervalSeconds: 300,
-  failureWarningThreshold: 3,
-  debugLogging: false
-});
 const state = {
   settings: { ...DEFAULT_SETTINGS },
   intervalId: null,
@@ -88,33 +89,6 @@ async function handleMessage(message) {
 }
 
 /**
- * Validates the message envelope shared by all extension contexts.
- * @param {unknown} message
- * @returns {{ok: boolean, data?: any, error?: {code: string, message: string}}}
- */
-function validateMessage(message) {
-  const allowedTypes = new Set([
-    "CKA_GET_STATUS",
-    "CKA_STATUS_UPDATE",
-    "CKA_SETTINGS_UPDATED",
-    "CKA_APPLY_SETTINGS",
-    "CKA_TEST_CLICK",
-    "CKA_RECONCILE_BADGE",
-    "CKA_ERROR"
-  ]);
-  if (!message || typeof message !== "object") {
-    return errorResponse("INVALID_MESSAGE", "Message must be an object");
-  }
-  if (message.source !== SOURCE) {
-    return errorResponse("INVALID_SOURCE", "Message source is not colab-keepalive");
-  }
-  if (!allowedTypes.has(message.type)) {
-    return errorResponse("INVALID_TYPE", "Message type is not supported");
-  }
-  return okResponse();
-}
-
-/**
  * Applies validated settings and starts or stops the local click interval.
  * @param {typeof DEFAULT_SETTINGS} settings
  * @returns {void}
@@ -186,7 +160,7 @@ function findConnectControl() {
   for (const entry of prioritySelectors) {
     for (const element of queryAllDeep(entry.selector)) {
       const target = getClickableElement(element);
-      if (target && isVisibleAndEnabled(target)) {
+      if (target && isVisibleAndEnabled(target) && isConnectActionElement(target, element)) {
         return { element: target, label: describeElement(target, entry.label) };
       }
     }
@@ -263,11 +237,22 @@ function findTextButtons() {
       break;
     }
     const text = getElementLabel(element);
-    if (/\b(re)?connect\b/i.test(text)) {
+    if (classifyConnectLabel(text).isConnectAction) {
       matches.push(element);
     }
   }
   return matches;
+}
+
+/**
+ * Checks that a candidate represents a Connect/Reconnect action, not connected state.
+ * @param {HTMLElement} target
+ * @param {HTMLElement} sourceElement
+ * @returns {boolean}
+ */
+function isConnectActionElement(target, sourceElement) {
+  const label = getElementLabel(target) || getElementLabel(sourceElement);
+  return classifyConnectLabel(label).isConnectAction;
 }
 
 /**
@@ -437,48 +422,6 @@ function reportError(code, message) {
 }
 
 /**
- * Validates and clamps settings.
- * @param {Record<string, unknown>} input
- * @returns {typeof DEFAULT_SETTINGS}
- */
-function validateSettings(input = {}) {
-  const minIntervalSeconds = validNumber(input.minIntervalSeconds, DEFAULT_SETTINGS.minIntervalSeconds, 5, 3600);
-  const maxIntervalSeconds = Math.max(
-    minIntervalSeconds,
-    validNumber(input.maxIntervalSeconds, DEFAULT_SETTINGS.maxIntervalSeconds, minIntervalSeconds, 3600)
-  );
-  return {
-    enabled: typeof input.enabled === "boolean" ? input.enabled : DEFAULT_SETTINGS.enabled,
-    intervalSeconds: validNumber(input.intervalSeconds, DEFAULT_SETTINGS.intervalSeconds, minIntervalSeconds, maxIntervalSeconds),
-    minIntervalSeconds,
-    maxIntervalSeconds,
-    failureWarningThreshold: validNumber(
-      input.failureWarningThreshold,
-      DEFAULT_SETTINGS.failureWarningThreshold,
-      1,
-      20
-    ),
-    debugLogging: typeof input.debugLogging === "boolean" ? input.debugLogging : DEFAULT_SETTINGS.debugLogging
-  };
-}
-
-/**
- * Returns a bounded integer setting.
- * @param {unknown} value
- * @param {number} fallback
- * @param {number} min
- * @param {number} max
- * @returns {number}
- */
-function validNumber(value, fallback, min, max) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return fallback;
-  }
-  return Math.min(max, Math.max(min, Math.round(numeric)));
-}
-
-/**
  * Produces a readable element label for diagnostics.
  * @param {HTMLElement} element
  * @param {string} fallback
@@ -537,31 +480,4 @@ function debugLog(...args) {
   if (state.settings.debugLogging) {
     console.debug(LOG_PREFIX, ...args);
   }
-}
-
-/**
- * Creates a protocol request identifier.
- * @returns {string}
- */
-function createRequestId() {
-  return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-/**
- * Returns a successful protocol response.
- * @param {any} [data]
- * @returns {{ok: true, data?: any}}
- */
-function okResponse(data) {
-  return typeof data === "undefined" ? { ok: true } : { ok: true, data };
-}
-
-/**
- * Returns an error protocol response.
- * @param {string} code
- * @param {string} message
- * @returns {{ok: false, error: {code: string, message: string}}}
- */
-function errorResponse(code, message) {
-  return { ok: false, error: { code, message } };
 }

@@ -6,7 +6,7 @@ Google Colab is a trademark of Google LLC. This project is not affiliated with, 
 
 ## What It Does
 
-- Runs a content script only on `https://*.colab.research.google.com/*`.
+- Runs a content script only on `https://colab.research.google.com/*` and `https://*.colab.research.google.com/*`.
 - Detects Colab Connect/Reconnect controls, including controls inside open shadow roots.
 - Clicks only visible and enabled Connect/Reconnect controls.
 - Stores user settings in `chrome.storage.sync`.
@@ -54,7 +54,7 @@ The manifest intentionally does not request `scripting`, `tabs`, `activeTab`, `w
 
 ## How Keepalive Works
 
-The content script owns the keep-alive interval in each Colab tab. On each tick it searches for a click target in this priority order:
+The content script owns the keep-alive interval in each Colab tab. On each tick it searches for a click target in this priority order, then filters every candidate through shared Connect/Reconnect label classification so connected-state controls such as Disconnect, Connected, or Connecting are not clicked:
 
 1. `colab-connect-button`
 2. `#connect`
@@ -91,9 +91,11 @@ When Pillow is available, the script converts the source to RGBA, center-pads no
 ```sh
 python3 scripts/generate-icons.py
 python3 -m json.tool manifest.json
+node --check shared.js
 node --check background.js
 node --check content.js
 node --check popup/popup.js
+node --test tests/*.test.mjs
 ```
 
 Additional local checks:

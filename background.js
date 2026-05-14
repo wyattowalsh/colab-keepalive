@@ -1,7 +1,17 @@
 "use strict";
 
-const SOURCE = "colab-keepalive";
-const LOG_PREFIX = "[Colab-Keepalive]";
+import "./shared.js";
+
+const {
+  DEFAULT_SETTINGS,
+  LOG_PREFIX,
+  SOURCE,
+  createRequestId,
+  errorResponse,
+  okResponse,
+  validateMessage,
+  validateSettings
+} = globalThis.ColabKeepaliveShared;
 const ALARM_NAME = "colab-keepalive-reconcile";
 const RECONCILE_INTERVAL_MINUTES = 5;
 const SESSION_STATUS_KEY = "tabStatuses";
@@ -12,23 +22,6 @@ const COLAB_URL_PATTERNS = [
 const COLAB_ORIGINS = new Set([
   "https://colab.research.google.com"
 ]);
-const MESSAGE_TYPES = new Set([
-  "CKA_GET_STATUS",
-  "CKA_STATUS_UPDATE",
-  "CKA_SETTINGS_UPDATED",
-  "CKA_APPLY_SETTINGS",
-  "CKA_TEST_CLICK",
-  "CKA_RECONCILE_BADGE",
-  "CKA_ERROR"
-]);
-const DEFAULT_SETTINGS = Object.freeze({
-  enabled: true,
-  intervalSeconds: 60,
-  minIntervalSeconds: 30,
-  maxIntervalSeconds: 300,
-  failureWarningThreshold: 3,
-  debugLogging: false
-});
 
 chrome.runtime.onInstalled.addListener(() => {
   void initializeExtension();
@@ -126,27 +119,6 @@ async function handleRuntimeMessage(message, sender) {
 }
 
 /**
- * Validates the shared runtime message envelope.
- * @param {unknown} message
- * @returns {{ok: boolean, data?: any, error?: {code: string, message: string}}}
- */
-function validateMessage(message) {
-  if (!message || typeof message !== "object") {
-    return errorResponse("INVALID_MESSAGE", "Message must be an object");
-  }
-  if (message.source !== SOURCE) {
-    return errorResponse("INVALID_SOURCE", "Message source is not colab-keepalive");
-  }
-  if (!MESSAGE_TYPES.has(message.type)) {
-    return errorResponse("INVALID_TYPE", "Message type is not supported");
-  }
-  if ("requestId" in message && typeof message.requestId !== "string") {
-    return errorResponse("INVALID_REQUEST_ID", "Message requestId must be a string");
-  }
-  return okResponse();
-}
-
-/**
  * Validates that a sender belongs to an allowed Google Colab page.
  * @param {chrome.runtime.MessageSender} sender
  * @returns {boolean}
@@ -188,48 +160,6 @@ async function setDefaultSettings() {
     await chrome.storage.sync.set(merged);
   }
   return merged;
-}
-
-/**
- * Validates settings and clamps user-editable intervals to allowed bounds.
- * @param {Record<string, unknown>} input
- * @returns {typeof DEFAULT_SETTINGS}
- */
-function validateSettings(input = {}) {
-  const minIntervalSeconds = validNumber(input.minIntervalSeconds, DEFAULT_SETTINGS.minIntervalSeconds, 5, 3600);
-  const maxIntervalSeconds = Math.max(
-    minIntervalSeconds,
-    validNumber(input.maxIntervalSeconds, DEFAULT_SETTINGS.maxIntervalSeconds, minIntervalSeconds, 3600)
-  );
-  return {
-    enabled: typeof input.enabled === "boolean" ? input.enabled : DEFAULT_SETTINGS.enabled,
-    intervalSeconds: validNumber(input.intervalSeconds, DEFAULT_SETTINGS.intervalSeconds, minIntervalSeconds, maxIntervalSeconds),
-    minIntervalSeconds,
-    maxIntervalSeconds,
-    failureWarningThreshold: validNumber(
-      input.failureWarningThreshold,
-      DEFAULT_SETTINGS.failureWarningThreshold,
-      1,
-      20
-    ),
-    debugLogging: typeof input.debugLogging === "boolean" ? input.debugLogging : DEFAULT_SETTINGS.debugLogging
-  };
-}
-
-/**
- * Returns a bounded integer.
- * @param {unknown} value
- * @param {number} fallback
- * @param {number} min
- * @param {number} max
- * @returns {number}
- */
-function validNumber(value, fallback, min, max) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return fallback;
-  }
-  return Math.min(max, Math.max(min, Math.round(numeric)));
 }
 
 /**
@@ -483,31 +413,4 @@ function isAllowedColabUrl(value) {
   } catch {
     return false;
   }
-}
-
-/**
- * Creates a protocol request identifier.
- * @returns {string}
- */
-function createRequestId() {
-  return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-/**
- * Returns a successful protocol response.
- * @param {any} [data]
- * @returns {{ok: true, data?: any}}
- */
-function okResponse(data) {
-  return typeof data === "undefined" ? { ok: true } : { ok: true, data };
-}
-
-/**
- * Returns an error protocol response.
- * @param {string} code
- * @param {string} message
- * @returns {{ok: false, error: {code: string, message: string}}}
- */
-function errorResponse(code, message) {
-  return { ok: false, error: { code, message } };
 }

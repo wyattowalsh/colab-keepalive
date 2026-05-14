@@ -42,12 +42,14 @@ Use this checklist before publishing or relying on a local unpacked build.
 - Open `https://colab.research.google.com/`.
 - Open or create a notebook.
 - Confirm the popup tab count increases.
+- Confirm the content script is active on both `https://colab.research.google.com/*` and Colab subdomain URLs.
 - Confirm the badge is green `ON` when enabled.
 - Turn the extension off and confirm the badge becomes gray `OFF`.
 - Turn it back on and confirm open Colab tabs receive the setting without reload.
 - Set the interval to 30 seconds and watch the content script status update after ticks.
 - Click **Test Click Now** while a Colab notebook tab is open.
 - Confirm the visible Connect/Reconnect control is clicked only when it is visible and enabled.
+- Confirm Disconnect, Connected, Connecting, and Connection detail controls are not clicked.
 - Confirm the failure count stays at zero when a control is found.
 
 ## Reconnect and Error States
@@ -79,5 +81,7 @@ Use this checklist before publishing or relying on a local unpacked build.
 - Confirm all generated icons are valid PNGs with correct dimensions.
 - Confirm `python3 -m json.tool manifest.json` succeeds.
 - Confirm `node --check background.js content.js popup/popup.js` succeeds.
+- Confirm `node --check shared.js background.js content.js popup/popup.js` succeeds.
+- Confirm `node --test tests/*.test.mjs` succeeds.
 - Confirm no forbidden permissions are present in `manifest.json`.
 - Confirm `icon.png` is unchanged from the source asset supplied to the repository.
