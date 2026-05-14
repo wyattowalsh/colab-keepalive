@@ -69,7 +69,14 @@ test("validates and clamps persisted settings consistently", async () => {
     minIntervalSeconds: 30,
     maxIntervalSeconds: 300,
     failureWarningThreshold: 20,
-    debugLogging: true
+    debugLogging: true,
+    humanizeSignals: true,
+    simulateActivity: true,
+    dismissDialogs: true,
+    jitterRange: 0.15,
+    keyboardShortcuts: true,
+    browserNotifications: false,
+    theme: "auto"
   });
 });
 
