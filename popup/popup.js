@@ -58,6 +58,20 @@ const elements = {
 	panelDashboard: document.getElementById("panel-dashboard"),
 	panelSettings: document.getElementById("panel-settings"),
 	panelAdvanced: document.getElementById("panel-advanced"),
+	scheduleEnabled: document.getElementById("schedule-enabled"),
+	scheduleControls: document.getElementById("schedule-controls"),
+	workStart: document.getElementById("work-start"),
+	workEnd: document.getElementById("work-end"),
+	workDays: document.querySelectorAll('.work-days input[type="checkbox"]'),
+	multiTabEnabled: document.getElementById("multi-tab-enabled"),
+	multitabControls: document.getElementById("multitab-controls"),
+	tabSyncMode: document.getElementById("tab-sync-mode"),
+	targetMode: document.getElementById("target-mode"),
+	customSelectors: document.getElementById("custom-selectors"),
+	themeAccent: document.getElementById("theme-accent"),
+	themeBg: document.getElementById("theme-bg"),
+	themeFg: document.getElementById("theme-fg"),
+	resetTheme: document.getElementById("reset-theme"),
 };
 
 const state = {
