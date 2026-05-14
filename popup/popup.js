@@ -22,7 +22,6 @@ const elements = {
 	lastClick: document.getElementById("last-click"),
 	failureCount: document.getElementById("failure-count"),
 	uptime: document.getElementById("uptime"),
-	liveStatus: document.getElementById("live-status"),
 	statusPill: document.getElementById("status-pill"),
 	testClick: document.getElementById("test-click"),
 	save: document.getElementById("save"),
@@ -414,22 +413,6 @@ function formatTimestamp(timestamp) {
 		minute: "2-digit",
 		second: "2-digit",
 	}).format(new Date(timestamp));
-}
-
-/** @param {string} stateName */
-function humanStatus(stateName) {
-	switch (stateName) {
-		case "ready":
-			return "Ready";
-		case "warning":
-			return "Needs attention";
-		case "error":
-			return "Error";
-		case "no-tabs":
-			return "No Colab tabs open";
-		default:
-			return "Waiting";
-	}
 }
 
 /**
