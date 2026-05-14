@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Colab Keepalive</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="shell" aria-labelledby="title">
+      <header class="header">
+        <div>
+          <h1 id="title">Colab Keepalive</h1>
+          <p class="version">Version <span id="version">...</span></p>
+        </div>
+        <label class="switch" for="enabled">
+          <input id="enabled" type="checkbox" role="switch" aria-describedby="enabled-help">
+          <span class="switch-track" aria-hidden="true"></span>
+          <span class="switch-label">Enabled</span>
+        </label>
+      </header>
+
+      <p id="enabled-help" class="sr-only">Turn automatic Colab Connect and Reconnect clicking on or off.</p>
+
+      <section class="panel" aria-labelledby="timing-title">
+        <div class="section-header">
+          <h2 id="timing-title">Timing</h2>
+          <span id="save-state" class="save-state" role="status" aria-live="polite">Saved</span>
+        </div>
+        <div class="interval-row">
+          <label for="interval">Interval</label>
+          <output id="interval-output" for="interval interval-number">60s</output>
+        </div>
+        <input id="interval" type="range" min="30" max="300" step="5" value="60">
+        <div class="number-row">
+          <label for="interval-number">Seconds</label>
+          <input id="interval-number" type="number" min="30" max="300" step="5" inputmode="numeric" value="60">
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="status-title">
+        <div class="section-header">
+          <h2 id="status-title">Status</h2>
+          <span id="status-pill" class="pill">No tabs</span>
+        </div>
+        <dl class="stats">
+          <div>
+            <dt>Colab tabs</dt>
+            <dd id="tab-count">0</dd>
+          </div>
+          <div>
+            <dt>Last click</dt>
+            <dd id="last-click">Never</dd>
+          </div>
+          <div>
+            <dt>Failures</dt>
+            <dd id="failure-count">0</dd>
+          </div>
+          <div>
+            <dt>Live status</dt>
+            <dd id="live-status">Waiting</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="actions" aria-label="Extension actions">
+        <button id="test-click" type="button">Test Click Now</button>
+        <button id="save" type="button" class="secondary">Save</button>
+        <button id="reset" type="button" class="secondary danger">Reset to Defaults</button>
+      </section>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

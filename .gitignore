@@ -4,6 +4,8 @@
 /node_modules
 /.pnp
 .pnp.js
+__pycache__/
+*.py[cod]
 
 # testing
 /coverage
@@ -14,6 +16,10 @@
 
 # production
 /build
+
+# canonical and generated extension icons are intentionally tracked
+!icon.png
+!icons/*.png
 
 # misc
 .DS_Store
