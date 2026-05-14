@@ -13,7 +13,6 @@
 		"CKA_ERROR",
 		"CKA_REQUEST_WAKE_LOCK",
 		"CKA_RELEASE_WAKE_LOCK",
-		"CKA_GET_UPTIME",
 		"CKA_SHOW_NOTIFICATION",
 		"CKA_DISMISS_DIALOG_DETECTED",
 	]);
@@ -234,19 +233,6 @@
 	}
 
 	/**
-	 * Computes a jittered interval in milliseconds from base seconds and jitter ratio.
-	 * @param {number} baseSeconds
-	 * @param {number} jitterRatio
-	 * @returns {number}
-	 */
-	function computeJitteredInterval(baseSeconds, jitterRatio) {
-		const baseMs = baseSeconds * 1000;
-		const jitter = baseMs * jitterRatio;
-		const offset = (Math.random() * 2 - 1) * jitter;
-		return Math.max(5000, Math.round(baseMs + offset));
-	}
-
-	/**
 	 * Formats uptime milliseconds into a human-readable string.
 	 * @param {number} ms
 	 * @returns {string}
@@ -333,7 +319,6 @@
 		WAKE_LOCK_RETRY_MS,
 		classifyConnectLabel,
 		isDismissLabel,
-		computeJitteredInterval,
 		formatUptime,
 		createRequestId,
 		errorResponse,

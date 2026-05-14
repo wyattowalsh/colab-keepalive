@@ -6,7 +6,6 @@ const {
 	SOURCE,
 	SYNTHETIC_EVENT_TYPES,
 	classifyConnectLabel,
-	computeJitteredInterval,
 	createRequestId,
 	errorResponse,
 	isDismissLabel,
@@ -37,6 +36,7 @@ const state = {
 	// Humanization state
 	wakeLock: null,
 	wakeLockRetryId: null,
+	wakeLockRetryCount: 0,
 	activityTimerId: null,
 	uptimeStartAt: null,
 	totalUptimeMs: 0,
@@ -62,7 +62,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 window.addEventListener("pagehide", cleanup, { once: true });
-window.addEventListener("beforeunload", cleanup, { once: true });
 
 void initialize();
 
@@ -94,14 +93,6 @@ async function handleMessage(message) {
 	switch (message.type) {
 		case "CKA_GET_STATUS":
 			return okResponse(buildStatus("queried"));
-		case "CKA_GET_UPTIME": {
-			const uptime = getUptime();
-			return okResponse({
-				uptimeMs: uptime,
-				uptimeFormatted: formatUptime(uptime),
-				startedAt: state.uptimeStartAt,
-			});
-		}
 		case "CKA_REQUEST_WAKE_LOCK": {
 			await requestWakeLock();
 			return okResponse({ wakeLockActive: Boolean(state.wakeLock) });
@@ -469,12 +460,18 @@ async function requestWakeLock() {
 	}
 	try {
 		state.wakeLock = await navigator.wakeLock.request("screen");
+		state.wakeLockRetryCount = 0;
 		debugLog("Screen wake lock acquired");
 		state.wakeLock.addEventListener("release", () => {
 			debugLog("Screen wake lock released");
 			state.wakeLock = null;
-			// Re-request after a short delay if still enabled
-			if (state.settings.enabled && state.settings.humanizeSignals) {
+			// Re-request after a short delay if still enabled (max 3 retries)
+			if (
+				state.settings.enabled &&
+				state.settings.humanizeSignals &&
+				state.wakeLockRetryCount < 3
+			) {
+				state.wakeLockRetryCount += 1;
 				state.wakeLockRetryId = window.setTimeout(() => {
 					void requestWakeLock();
 				}, WAKE_LOCK_RETRY_MS);
@@ -580,18 +577,19 @@ function dispatchSyntheticEvent() {
 			}
 			case "keydown":
 			case "keyup": {
-				const keys = [
-					"Shift",
-					"Control",
-					"Alt",
-					"Tab",
-					"Escape",
-					"Enter",
-					"ArrowUp",
-					"ArrowDown",
-					"ArrowLeft",
-					"ArrowRight",
-				];
+				const KEY_TO_CODE = {
+					Shift: "ShiftLeft",
+					Control: "ControlLeft",
+					Alt: "AltLeft",
+					Tab: "Tab",
+					Escape: "Escape",
+					Enter: "Enter",
+					ArrowUp: "ArrowUp",
+					ArrowDown: "ArrowDown",
+					ArrowLeft: "ArrowLeft",
+					ArrowRight: "ArrowRight",
+				};
+				const keys = Object.keys(KEY_TO_CODE);
 				const key = keys[Math.floor(Math.random() * keys.length)];
 				target.dispatchEvent(
 					new KeyboardEvent(eventType, {
@@ -599,7 +597,7 @@ function dispatchSyntheticEvent() {
 						cancelable: true,
 						composed: true,
 						key,
-						code: key,
+						code: KEY_TO_CODE[key],
 						view: window,
 					}),
 				);

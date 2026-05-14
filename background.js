@@ -132,10 +132,6 @@ async function handleRuntimeMessage(message, sender) {
 			return okResponse({ reconciled: true });
 		case "CKA_SETTINGS_UPDATED":
 			return okResponse({ accepted: true });
-		case "CKA_GET_UPTIME": {
-			const uptime = await getAggregateUptime();
-			return okResponse(uptime);
-		}
 		case "CKA_SHOW_NOTIFICATION":
 			return await showNotification(payload);
 		case "CKA_DISMISS_DIALOG_DETECTED": {
@@ -573,7 +569,7 @@ async function showNotification(options) {
 		const id = `${NOTIFICATION_ID_PREFIX}${Date.now()}`;
 		await chrome.notifications.create(id, {
 			type: "basic",
-			iconUrl: options.iconUrl || chrome.runtime.getURL("icons/icon128.png"),
+			iconUrl: options.iconUrl || chrome.runtime.getURL("icons/icon-128.png"),
 			title: options.title || "Colab Keepalive",
 			message: options.message || "",
 			priority: 1,
@@ -615,13 +611,13 @@ async function getAggregateUptime() {
 	const seen = new Set();
 	for (const status of Object.values(statuses)) {
 		if (status?.uptimeMs && typeof status.uptimeMs === "number") {
-			totalMs = Math.max(totalMs, status.uptimeMs);
+			totalMs += status.uptimeMs;
 			seen.add(String(status.tabId));
 		}
 	}
 	const { [SESSION_UPTIME_KEY]: persisted = {} } =
 		await chrome.storage.session.get(SESSION_UPTIME_KEY);
-	totalMs = Math.max(totalMs, persisted.totalUptimeMs || 0);
+	totalMs += persisted.totalUptimeMs || 0;
 	const tabCount = tabs.length;
 	return {
 		totalUptimeMs: totalMs,

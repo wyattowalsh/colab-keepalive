@@ -266,8 +266,10 @@ function syncJitterInputs(rawValue, shouldSave, forceClamp = false) {
 		value = Math.round(DEFAULT_SETTINGS.jitterRange * 100);
 	}
 	value = Math.round(value);
-	if (forceClamp || value < 5 || value > 35) {
-		value = Math.min(35, Math.max(5, value));
+	const jitterMin = Math.round(JITTER_MIN * 100);
+	const jitterMax = Math.round(JITTER_MAX * 100);
+	if (forceClamp || value < jitterMin || value > jitterMax) {
+		value = Math.min(jitterMax, Math.max(jitterMin, value));
 	}
 
 	const ratio = value / 100;
