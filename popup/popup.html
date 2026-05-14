@@ -1,44 +1,55 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Colab Keepalive</title>
-    <link rel="stylesheet" href="popup.css">
+    <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <main class="shell" aria-labelledby="title">
       <header class="header">
-        <div>
-          <h1 id="title">Colab Keepalive</h1>
-          <p class="version">Version <span id="version">...</span></p>
+        <div class="brand">
+          <img
+            src="../icons/icon-32.png"
+            alt=""
+            class="brand-icon"
+            aria-hidden="true"
+            width="28"
+            height="28"
+          />
+          <div>
+            <h1 id="title">Colab Keepalive</h1>
+            <p class="version">v<span id="version">...</span></p>
+          </div>
         </div>
-        <label class="switch" for="enabled">
-          <input id="enabled" type="checkbox" role="switch" aria-describedby="enabled-help">
-          <span class="switch-track" aria-hidden="true"></span>
-          <span class="switch-label">Enabled</span>
-        </label>
+        <div class="header-actions">
+          <button
+            id="theme-toggle"
+            type="button"
+            class="icon-btn"
+            aria-label="Toggle theme"
+            title="Toggle theme"
+          >
+            ◐
+          </button>
+          <label class="switch" for="enabled">
+            <input
+              id="enabled"
+              type="checkbox"
+              role="switch"
+              aria-describedby="enabled-help"
+            />
+            <span class="switch-track" aria-hidden="true"></span>
+          </label>
+        </div>
       </header>
 
-      <p id="enabled-help" class="sr-only">Turn automatic Colab Connect and Reconnect clicking on or off.</p>
+      <p id="enabled-help" class="sr-only">
+        Turn automatic Colab keepalive on or off.
+      </p>
 
-      <section class="panel" aria-labelledby="timing-title">
-        <div class="section-header">
-          <h2 id="timing-title">Timing</h2>
-          <span id="save-state" class="save-state" role="status" aria-live="polite">Saved</span>
-        </div>
-        <div class="interval-row">
-          <label for="interval">Interval</label>
-          <output id="interval-output" for="interval interval-number">60s</output>
-        </div>
-        <input id="interval" type="range" min="30" max="300" step="5" value="60">
-        <div class="number-row">
-          <label for="interval-number">Seconds</label>
-          <input id="interval-number" type="number" min="30" max="300" step="5" inputmode="numeric" value="60">
-        </div>
-      </section>
-
-      <section class="panel" aria-labelledby="status-title">
+      <section class="panel status-panel" aria-labelledby="status-title">
         <div class="section-header">
           <h2 id="status-title">Status</h2>
           <span id="status-pill" class="pill">No tabs</span>
@@ -49,6 +60,10 @@
             <dd id="tab-count">0</dd>
           </div>
           <div>
+            <dt>Uptime</dt>
+            <dd id="uptime">0s</dd>
+          </div>
+          <div>
             <dt>Last click</dt>
             <dd id="last-click">Never</dd>
           </div>
@@ -56,17 +71,158 @@
             <dt>Failures</dt>
             <dd id="failure-count">0</dd>
           </div>
-          <div>
-            <dt>Live status</dt>
-            <dd id="live-status">Waiting</dd>
-          </div>
         </dl>
+        <div
+          id="humanization-bar"
+          class="humanization-bar"
+          aria-label="Humanization status"
+        >
+          <span id="wake-lock-indicator" class="indicator" data-active="false"
+            >Wake Lock</span
+          >
+          <span id="activity-indicator" class="indicator" data-active="false"
+            >Activity</span
+          >
+          <span id="dismiss-indicator" class="indicator" data-active="false"
+            >Dismiss</span
+          >
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="timing-title">
+        <div class="section-header">
+          <h2 id="timing-title">Timing</h2>
+          <span
+            id="save-state"
+            class="save-state"
+            role="status"
+            aria-live="polite"
+            >Saved</span
+          >
+        </div>
+        <div class="interval-row">
+          <label for="interval">Check interval</label>
+          <output id="interval-output" for="interval interval-number"
+            >60s</output
+          >
+        </div>
+        <input
+          id="interval"
+          type="range"
+          min="30"
+          max="300"
+          step="5"
+          value="60"
+        />
+        <div class="number-row">
+          <label for="interval-number">Seconds</label>
+          <input
+            id="interval-number"
+            type="number"
+            min="30"
+            max="300"
+            step="5"
+            inputmode="numeric"
+            value="60"
+          />
+        </div>
+        <div class="interval-row">
+          <label for="jitter">Jitter</label>
+          <output id="jitter-output" for="jitter jitter-number">15%</output>
+        </div>
+        <input id="jitter" type="range" min="5" max="35" step="1" value="15" />
+        <div class="number-row">
+          <label for="jitter-number">Percent</label>
+          <input
+            id="jitter-number"
+            type="number"
+            min="5"
+            max="35"
+            step="1"
+            inputmode="numeric"
+            value="15"
+          />
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="humanization-title">
+        <div class="section-header">
+          <h2 id="humanization-title">Humanization</h2>
+        </div>
+        <div class="toggle-list">
+          <label class="row-toggle" for="humanize-signals">
+            <span class="toggle-label">
+              <span class="toggle-title">Humanize signals</span>
+              <span class="toggle-desc">Wake lock + realistic intervals</span>
+            </span>
+            <span class="switch switch-sm">
+              <input id="humanize-signals" type="checkbox" role="switch" />
+              <span class="switch-track" aria-hidden="true"></span>
+            </span>
+          </label>
+          <label class="row-toggle" for="simulate-activity">
+            <span class="toggle-label">
+              <span class="toggle-title">Simulate activity</span>
+              <span class="toggle-desc">Mouse, keyboard, scroll events</span>
+            </span>
+            <span class="switch switch-sm">
+              <input id="simulate-activity" type="checkbox" role="switch" />
+              <span class="switch-track" aria-hidden="true"></span>
+            </span>
+          </label>
+          <label class="row-toggle" for="dismiss-dialogs">
+            <span class="toggle-label">
+              <span class="toggle-title">Dismiss dialogs</span>
+              <span class="toggle-desc">Auto-close Colab alerts</span>
+            </span>
+            <span class="switch switch-sm">
+              <input id="dismiss-dialogs" type="checkbox" role="switch" />
+              <span class="switch-track" aria-hidden="true"></span>
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="notifications-title">
+        <div class="section-header">
+          <h2 id="notifications-title">Notifications</h2>
+          <span
+            id="notification-perm"
+            class="pill perm-pill"
+            data-permitted="unknown"
+            >...</span
+          >
+        </div>
+        <div class="toggle-list">
+          <label class="row-toggle" for="browser-notifications">
+            <span class="toggle-label">
+              <span class="toggle-title">Browser notifications</span>
+              <span class="toggle-desc">Alerts for errors and dialogs</span>
+            </span>
+            <span class="switch switch-sm">
+              <input id="browser-notifications" type="checkbox" role="switch" />
+              <span class="switch-track" aria-hidden="true"></span>
+            </span>
+          </label>
+          <label class="row-toggle" for="keyboard-shortcuts">
+            <span class="toggle-label">
+              <span class="toggle-title">Keyboard shortcuts</span>
+              <span class="toggle-desc">Toggle, trigger, humanize</span>
+            </span>
+            <span class="switch switch-sm">
+              <input id="keyboard-shortcuts" type="checkbox" role="switch" />
+              <span class="switch-track" aria-hidden="true"></span>
+            </span>
+          </label>
+        </div>
       </section>
 
       <section class="actions" aria-label="Extension actions">
         <button id="test-click" type="button">Test Click Now</button>
         <button id="save" type="button" class="secondary">Save</button>
-        <button id="reset" type="button" class="secondary danger">Reset to Defaults</button>
+        <button id="reset" type="button" class="secondary danger">
+          Reset to Defaults
+        </button>
       </section>
     </main>
     <script src="../shared.js"></script>

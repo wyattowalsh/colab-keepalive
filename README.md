@@ -9,13 +9,16 @@ Google Colab is a trademark of Google LLC. This project is not affiliated with, 
 - Runs a content script only on `https://colab.research.google.com/*` and `https://*.colab.research.google.com/*`.
 - Detects Colab Connect/Reconnect controls, including controls inside open shadow roots.
 - Clicks only visible and enabled Connect/Reconnect controls.
+- **Humanizes keepalive signals** with jittered intervals, screen wake lock, and synthetic document-level activity (mouse, keyboard, scroll, wheel, focus) to better mimic real user presence.
+- **Auto-detects and dismisses** common Colab idle-timeout dialogs ("Are you still there?", "Got it", etc.).
+- Tracks total session uptime across all monitored Colab tabs.
 - Stores user settings in `chrome.storage.sync`.
 - Stores volatile tab status in `chrome.storage.session`.
 - Shows toolbar badge state:
   - Green `ON`: enabled.
   - Gray `OFF`: disabled.
   - Red `ERR`: repeated failures or error state.
-- Provides a popup with enable/disable, interval, live status, failure count, last click time, test click, and reset controls.
+- Provides a polished popup with enable/disable, interval and jitter controls, live status, uptime, humanization indicators, theme toggle (light/dark/auto), browser notification settings, keyboard shortcut hints, test click, and reset controls.
 
 ## What It Does Not Do
 
@@ -64,7 +67,16 @@ The content script owns the keep-alive interval in each Colab tab. On each tick 
 
 The search walks the document and open shadow roots with strict recursion and node bounds. The script clicks only visible, enabled targets. Failures are tracked per tab and become warnings after the configured threshold.
 
-The service worker does not drive clicks and does not try to stay alive artificially. It registers listeners at the top level, stores critical state in Chrome storage, fans out setting updates, and uses `chrome.alarms` only for lightweight reconciliation. This follows Chrome MV3 service-worker lifecycle guidance.
+### Humanization Layer
+
+When humanization is enabled, the content script adds three defenses against Colab idle detection:
+
+- **Jittered intervals**: the actual tick interval varies randomly around the configured base by the jitter percentage (default 15%). This prevents perfectly periodic automation signatures.
+- **Screen Wake Lock**: requests `navigator.wakeLock` to prevent the OS from sleeping the display, which Colab may interpret as user absence.
+- **Synthetic activity**: dispatches realistic `mousemove`, `mousedown`, `mouseup`, `keydown`, `keyup`, `scroll`, `wheel`, and `focus` events at the document level with randomized coordinates and timing. This targets Colab’s client-side idle listeners without interacting with page controls.
+- **Dismiss dialog handling**: scans the page for common dismiss/close/continue/ok buttons and clicks them automatically when they appear.
+
+The service worker does not drive clicks and does not try to stay alive artificially. It registers listeners at the top level, stores critical state in Chrome storage, fans out setting updates, aggregates uptime across tabs, handles keyboard shortcuts, and uses `chrome.alarms` only for lightweight reconciliation. This follows Chrome MV3 service-worker lifecycle guidance.
 
 ## Icon Pipeline
 
@@ -85,6 +97,14 @@ The script reads only `./icon.png` and writes:
 - `icons/icon-512.png`
 
 When Pillow is available, the script converts the source to RGBA, center-pads non-square input with transparent pixels, resizes using Lanczos resampling, preserves transparency, and validates PNG dimensions. If Pillow is unavailable, the script can use the macOS `sips` fallback only for already-square PNG input; that fallback does not guarantee Lanczos resampling and cannot perform transparent center-padding.
+
+## Keyboard Shortcuts
+
+You can configure shortcuts at `chrome://extensions/shortcuts`:
+
+- **Toggle enabled** — quickly turn the extension on or off.
+- **Trigger click** — run an immediate keepalive click in the best available Colab tab.
+- **Toggle humanize** — enable or disable humanization features (wake lock, activity simulation, jitter).
 
 ## Development Commands
 
@@ -120,7 +140,8 @@ PY
 - **No Colab tabs detected**: open a page under `https://colab.research.google.com/` or reload existing Colab tabs after installing the extension.
 - **Test Click Now is disabled**: no matching Colab tab is currently open.
 - **Badge shows ERR**: the content script repeatedly failed to find or click a visible enabled Connect/Reconnect control. Colab may have changed its UI, a modal may be blocking the page, or the runtime may require user action.
-- **Runtime still disconnects**: Colab server-side runtime limits, quotas, idle policies, account restrictions, and abuse protections still apply.
+- **Humanization indicators are off**: the content script may not have requested wake lock yet (it tries on the next tick), or the browser does not support the Wake Lock API. Activity simulation runs only when the tab is active.
+- **Runtime still disconnects**: Colab server-side runtime limits, quotas, idle policies, account restrictions, and abuse protections still apply. Humanization improves local idle detection but cannot override server-side limits.
 - **Icons are missing**: run `python3 scripts/generate-icons.py` from the repository root.
 
 ## Chrome Web Store Checklist
@@ -129,7 +150,7 @@ PY
 - Confirm the extension loads unpacked without manifest or service worker errors.
 - Confirm content scripts are limited to Colab domains.
 - Confirm the popup has no inline scripts and loads no remote assets.
-- Confirm permissions are limited to `storage`, `alarms`, and Colab host permissions.
+- Confirm permissions are limited to `storage`, `alarms`, and Colab host permissions (notifications are requested at runtime, not in the manifest).
 - Confirm README, `docs/MANUAL_TESTING.md`, and all `AGENTS.md` files match the final behavior.
 - Confirm the package contains no analytics, tracking, external calls, dynamic code execution, or remote code.
 
