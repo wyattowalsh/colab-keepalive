@@ -40,7 +40,7 @@
 		"https://colab.research.google.com/*",
 		"https://*.colab.research.google.com/*"
 	],
-	"permissions": ["storage", "alarms"],
+	"permissions": ["storage", "alarms", "notifications"],
 	"commands": {
 		"toggle-enabled": {
 			"description": "Toggle Colab Keepalive on/off"

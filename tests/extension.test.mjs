@@ -93,7 +93,7 @@ test("manifest stays MV3, narrow, and injects content scripts on canonical Colab
   const manifest = await readJson("manifest.json");
 
   assert.equal(manifest.manifest_version, 3);
-  assert.deepEqual(manifest.permissions, ["storage", "alarms"]);
+  assert.deepEqual(manifest.permissions, ["storage", "alarms", "notifications"]);
   for (const permission of manifest.permissions) {
     assert.equal(FORBIDDEN_PERMISSIONS.has(permission), false, permission);
   }
