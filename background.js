@@ -37,7 +37,7 @@ const sessionFallback = new Map();
  */
 async function sessionGet(key) {
 	try {
-		return await sessionGet(key);
+		return await chrome.storage.session.get(key);
 	} catch (error) {
 		console.warn(
 			LOG_PREFIX,
@@ -55,7 +55,7 @@ async function sessionGet(key) {
  */
 async function sessionSet(items) {
 	try {
-		await sessionSet(items);
+		await chrome.storage.session.set(items);
 	} catch (error) {
 		console.warn(
 			LOG_PREFIX,
