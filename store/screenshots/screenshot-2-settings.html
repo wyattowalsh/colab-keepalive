@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Screenshot 2 - Settings</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        width: 1280px;
+        height: 800px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      .mock-browser {
+        width: 960px;
+        height: 640px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .browser-header {
+        height: 40px;
+        background: #f1f3f4;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        gap: 8px;
+      }
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      .dot-red {
+        background: #ff5f57;
+      }
+      .dot-yellow {
+        background: #febc2e;
+      }
+      .dot-green {
+        background: #28c840;
+      }
+      .address-bar {
+        flex: 1;
+        height: 28px;
+        background: #fff;
+        border-radius: 14px;
+        margin: 0 12px;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        font-size: 13px;
+        color: #5f6368;
+      }
+      .browser-body {
+        flex: 1;
+        display: flex;
+        background: #f8f9fa;
+        position: relative;
+      }
+      .colab-mock {
+        flex: 1;
+        padding: 24px;
+        background: #fff;
+      }
+      .colab-header {
+        height: 48px;
+        background: #f1f3f4;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+      }
+      .colab-content {
+        height: 200px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 16px;
+      }
+      .popup-overlay {
+        position: absolute;
+        top: 60px;
+        right: 40px;
+        width: 360px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+      }
+      .popup-header {
+        padding: 16px;
+        border-bottom: 1px solid #e8eaed;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .popup-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #202124;
+      }
+      .status-badge {
+        padding: 4px 12px;
+        background: #e6f4ea;
+        color: #1e8e3e;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .popup-body {
+        padding: 16px;
+      }
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid #e8eaed;
+        margin-bottom: 16px;
+      }
+      .tab {
+        flex: 1;
+        padding: 8px;
+        text-align: center;
+        font-size: 12px;
+        color: #5f6368;
+        border-bottom: 2px solid transparent;
+      }
+      .tab.active {
+        color: #1a73e8;
+        border-bottom-color: #1a73e8;
+        font-weight: 500;
+      }
+      .section-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #202124;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .control-group {
+        margin-bottom: 16px;
+      }
+      .control-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        color: #5f6368;
+        margin-bottom: 6px;
+      }
+      .control-value {
+        font-weight: 500;
+        color: #202124;
+      }
+      .slider {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: #e8eaed;
+        position: relative;
+        margin-bottom: 12px;
+      }
+      .slider-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 20%;
+        background: #1a73e8;
+        border-radius: 3px;
+      }
+      .slider-thumb {
+        position: absolute;
+        left: 20%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 18px;
+        height: 18px;
+        background: #fff;
+        border: 2px solid #1a73e8;
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #f1f3f4;
+      }
+      .toggle-label {
+        font-size: 13px;
+        color: #202124;
+      }
+      .toggle-switch {
+        width: 36px;
+        height: 20px;
+        background: #1a73e8;
+        border-radius: 10px;
+        position: relative;
+        cursor: pointer;
+      }
+      .toggle-switch.off {
+        background: #dadce0;
+      }
+      .toggle-thumb {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        width: 16px;
+        height: 16px;
+        background: #fff;
+        border-radius: 50%;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .toggle-switch.off .toggle-thumb {
+        right: auto;
+        left: 2px;
+      }
+      .select-box {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #dadce0;
+        border-radius: 6px;
+        font-size: 13px;
+        color: #202124;
+        background: #fff;
+        margin-bottom: 12px;
+      }
+      .save-btn {
+        width: 100%;
+        padding: 10px;
+        background: #1a73e8;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mock-browser">
+      <div class="browser-header">
+        <div class="dot dot-red"></div>
+        <div class="dot dot-yellow"></div>
+        <div class="dot dot-green"></div>
+        <div class="address-bar">colab.research.google.com/drive/abc123</div>
+      </div>
+      <div class="browser-body">
+        <div class="colab-mock">
+          <div class="colab-header"></div>
+          <div class="colab-content"></div>
+          <div class="colab-content" style="height: 120px"></div>
+        </div>
+        <div class="popup-overlay">
+          <div class="popup-header">
+            <span class="popup-title">Colab Keepalive</span>
+            <span class="status-badge">Active</span>
+          </div>
+          <div class="tabs">
+            <div class="tab">Dashboard</div>
+            <div class="tab active">Settings</div>
+            <div class="tab">Advanced</div>
+          </div>
+          <div class="popup-body">
+            <div class="section-title">Timing</div>
+            <div class="control-group">
+              <div class="control-label">
+                <span>Interval</span>
+                <span class="control-value">60 seconds</span>
+              </div>
+              <div class="slider">
+                <div class="slider-fill"></div>
+                <div class="slider-thumb"></div>
+              </div>
+            </div>
+            <div class="control-group">
+              <div class="control-label">
+                <span>Jitter Range</span>
+                <span class="control-value">15%</span>
+              </div>
+              <div class="slider">
+                <div class="slider-fill" style="width: 15%"></div>
+                <div class="slider-thumb" style="left: 15%"></div>
+              </div>
+            </div>
+
+            <div class="section-title">Behavior</div>
+            <div class="toggle-row">
+              <span class="toggle-label">Humanize Signals</span>
+              <div class="toggle-switch"><div class="toggle-thumb"></div></div>
+            </div>
+            <div class="toggle-row">
+              <span class="toggle-label">Simulate Activity</span>
+              <div class="toggle-switch"><div class="toggle-thumb"></div></div>
+            </div>
+            <div class="toggle-row">
+              <span class="toggle-label">Dismiss Dialogs</span>
+              <div class="toggle-switch off">
+                <div class="toggle-thumb"></div>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <span class="toggle-label">Notifications</span>
+              <div class="toggle-switch off">
+                <div class="toggle-thumb"></div>
+              </div>
+            </div>
+
+            <div class="section-title">Target</div>
+            <select class="select-box">
+              <option>Auto-detect Connect button</option>
+            </select>
+
+            <button class="save-btn">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Screenshot 1 - Dashboard</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        width: 1280px;
+        height: 800px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      .mock-browser {
+        width: 960px;
+        height: 640px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .browser-header {
+        height: 40px;
+        background: #f1f3f4;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        gap: 8px;
+      }
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      .dot-red {
+        background: #ff5f57;
+      }
+      .dot-yellow {
+        background: #febc2e;
+      }
+      .dot-green {
+        background: #28c840;
+      }
+      .address-bar {
+        flex: 1;
+        height: 28px;
+        background: #fff;
+        border-radius: 14px;
+        margin: 0 12px;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        font-size: 13px;
+        color: #5f6368;
+      }
+      .browser-body {
+        flex: 1;
+        display: flex;
+        background: #f8f9fa;
+        position: relative;
+      }
+      .colab-mock {
+        flex: 1;
+        padding: 24px;
+        background: #fff;
+      }
+      .colab-header {
+        height: 48px;
+        background: #f1f3f4;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+      }
+      .colab-content {
+        height: 200px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 16px;
+      }
+      .popup-overlay {
+        position: absolute;
+        top: 60px;
+        right: 40px;
+        width: 360px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+      }
+      .popup-header {
+        padding: 16px;
+        border-bottom: 1px solid #e8eaed;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .popup-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #202124;
+      }
+      .status-badge {
+        padding: 4px 12px;
+        background: #e6f4ea;
+        color: #1e8e3e;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .popup-body {
+        padding: 16px;
+      }
+      .status-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+      .status-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 13px;
+      }
+      .status-label {
+        color: #5f6368;
+      }
+      .status-value {
+        font-weight: 500;
+        color: #202124;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .stat-box {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 12px;
+        text-align: center;
+      }
+      .stat-number {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1a73e8;
+      }
+      .stat-label {
+        font-size: 11px;
+        color: #5f6368;
+        margin-top: 4px;
+      }
+      .action-btn {
+        width: 100%;
+        padding: 10px;
+        background: #1a73e8;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid #e8eaed;
+        margin-bottom: 12px;
+      }
+      .tab {
+        flex: 1;
+        padding: 8px;
+        text-align: center;
+        font-size: 12px;
+        color: #5f6368;
+        border-bottom: 2px solid transparent;
+      }
+      .tab.active {
+        color: #1a73e8;
+        border-bottom-color: #1a73e8;
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mock-browser">
+      <div class="browser-header">
+        <div class="dot dot-red"></div>
+        <div class="dot dot-yellow"></div>
+        <div class="dot dot-green"></div>
+        <div class="address-bar">colab.research.google.com/drive/abc123</div>
+      </div>
+      <div class="browser-body">
+        <div class="colab-mock">
+          <div class="colab-header"></div>
+          <div class="colab-content"></div>
+          <div class="colab-content" style="height: 120px"></div>
+        </div>
+        <div class="popup-overlay">
+          <div class="popup-header">
+            <span class="popup-title">Colab Keepalive</span>
+            <span class="status-badge">Active</span>
+          </div>
+          <div class="tabs">
+            <div class="tab active">Dashboard</div>
+            <div class="tab">Settings</div>
+            <div class="tab">Advanced</div>
+          </div>
+          <div class="popup-body">
+            <div class="status-card">
+              <div class="status-row">
+                <span class="status-label">Status</span>
+                <span class="status-value">Watching 2 tabs</span>
+              </div>
+              <div class="status-row">
+                <span class="status-label">Uptime</span>
+                <span class="status-value">4h 23m</span>
+              </div>
+              <div class="status-row">
+                <span class="status-label">Next click</span>
+                <span class="status-value">42s</span>
+              </div>
+            </div>
+            <div class="stats-grid">
+              <div class="stat-box">
+                <div class="stat-number">156</div>
+                <div class="stat-label">Total Clicks</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-number">3</div>
+                <div class="stat-label">Failures</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-number">98.1%</div>
+                <div class="stat-label">Success Rate</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-number">12.4h</div>
+                <div class="stat-label">Longest Session</div>
+              </div>
+            </div>
+            <button class="action-btn">Test Click Now</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

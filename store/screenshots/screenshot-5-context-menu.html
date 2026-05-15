@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Screenshot 5 - Context Menu</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        width: 1280px;
+        height: 800px;
+        background: #f8f9fa;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* Simulated Colab page background */
+      .colab-page {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e8eaed 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      .colab-content {
+        width: 900px;
+        height: 600px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 40px;
+        opacity: 0.7;
+      }
+
+      .colab-header {
+        height: 48px;
+        background: #f1f3f4;
+        border-radius: 4px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        gap: 12px;
+      }
+
+      .colab-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #dadce0;
+      }
+      .colab-line {
+        height: 8px;
+        background: #e8eaed;
+        border-radius: 4px;
+      }
+      .colab-line.short {
+        width: 120px;
+      }
+      .colab-line.medium {
+        width: 240px;
+      }
+      .colab-line.long {
+        width: 400px;
+      }
+
+      .colab-cell {
+        border: 1px solid #dadce0;
+        border-radius: 4px;
+        padding: 16px;
+        margin-bottom: 16px;
+        min-height: 120px;
+      }
+
+      /* Context Menu */
+      .context-menu {
+        position: absolute;
+        top: 280px;
+        left: 520px;
+        width: 280px;
+        background: white;
+        border-radius: 8px;
+        box-shadow:
+          0 4px 12px rgba(0, 0, 0, 0.15),
+          0 0 0 1px rgba(0, 0, 0, 0.05);
+        padding: 8px 0;
+        z-index: 100;
+      }
+
+      .menu-item {
+        padding: 10px 16px;
+        font-size: 14px;
+        color: #3c4043;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: background 0.15s;
+      }
+
+      .menu-item:hover {
+        background: #f1f3f4;
+      }
+      .menu-item.extension-item {
+        border-top: 1px solid #dadce0;
+        margin-top: 4px;
+        padding-top: 12px;
+      }
+
+      .menu-icon {
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .menu-icon svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .extension-badge {
+        margin-left: auto;
+        background: #1a73e8;
+        color: white;
+        font-size: 11px;
+        font-weight: 500;
+        padding: 2px 8px;
+        border-radius: 12px;
+      }
+
+      .menu-label {
+        flex: 1;
+      }
+
+      .menu-shortcut {
+        color: #9aa0a6;
+        font-size: 12px;
+      }
+
+      /* Extension submenu indicator */
+      .has-submenu::after {
+        content: "";
+        width: 0;
+        height: 0;
+        border-left: 5px solid #5f6368;
+        border-top: 4px solid transparent;
+        border-bottom: 4px solid transparent;
+        margin-left: auto;
+      }
+
+      /* Annotation */
+      .annotation {
+        position: absolute;
+        bottom: 40px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(26, 115, 232, 0.1);
+        border: 1px solid rgba(26, 115, 232, 0.3);
+        border-radius: 8px;
+        padding: 12px 24px;
+        font-size: 14px;
+        color: #1a73e8;
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="colab-page">
+      <div class="colab-content">
+        <div class="colab-header">
+          <div class="colab-dot"></div>
+          <div class="colab-line short"></div>
+        </div>
+        <div class="colab-cell">
+          <div class="colab-line medium" style="margin-bottom: 12px"></div>
+          <div class="colab-line long"></div>
+        </div>
+        <div class="colab-cell">
+          <div class="colab-line medium" style="margin-bottom: 12px"></div>
+          <div class="colab-line long"></div>
+        </div>
+        <div class="colab-cell">
+          <div class="colab-line medium" style="margin-bottom: 12px"></div>
+          <div class="colab-line long"></div>
+        </div>
+      </div>
+
+      <!-- Context Menu -->
+      <div class="context-menu">
+        <div class="menu-item">
+          <div class="menu-icon">
+            <svg viewBox="0 0 24 24" fill="#5f6368">
+              <path
+                d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+              />
+            </svg>
+          </div>
+          <span class="menu-label">Copy cell</span>
+        </div>
+        <div class="menu-item">
+          <div class="menu-icon">
+            <svg viewBox="0 0 24 24" fill="#5f6368">
+              <path
+                d="M19 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h4l3 3 3-3h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 16h-4.17L12 20.17 9.17 18H5V4h14v14z"
+              />
+            </svg>
+          </div>
+          <span class="menu-label">Add a comment</span>
+        </div>
+        <div class="menu-item">
+          <div class="menu-icon">
+            <svg viewBox="0 0 24 24" fill="#5f6368">
+              <path
+                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+              />
+            </svg>
+          </div>
+          <span class="menu-label">Run cell</span>
+          <span class="menu-shortcut">Ctrl+Enter</span>
+        </div>
+        <div class="menu-item extension-item has-submenu">
+          <div class="menu-icon">
+            <svg viewBox="0 0 24 24" fill="#1a73e8">
+              <path
+                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+              />
+            </svg>
+          </div>
+          <span class="menu-label" style="color: #1a73e8; font-weight: 500"
+            >Colab Keepalive</span
+          >
+          <span class="extension-badge">2 tabs</span>
+        </div>
+      </div>
+
+      <div class="annotation">
+        Right-click anywhere on a Colab page to access extension actions
+      </div>
+    </div>
+  </body>
+</html>
