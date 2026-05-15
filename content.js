@@ -209,6 +209,15 @@ async function keepAliveTick({ manual }) {
 		}
 	}
 
+	// Rate limit: max 1 click per 10 seconds (manual clicks exempt)
+	if (!manual && state.lastClickAt) {
+		const elapsed = Date.now() - state.lastClickAt;
+		if (elapsed < 10000) {
+			debugLog("Rate limit: skipping tick (", elapsed, "ms since last click)");
+			return okResponse(buildStatus("rate-limited"));
+		}
+	}
+
 	// Check for dismiss dialogs first
 	if (state.settings.dismissDialogs) {
 		const dismissed = findAndClickDismissDialog();
