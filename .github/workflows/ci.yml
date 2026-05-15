@@ -1,0 +1,179 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ["20.x", "22.x"]
+    name: Node ${{ matrix.node-version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Run tests
+        run: node --test tests/extension.test.mjs
+
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+
+      - name: Install dependencies
+        run: |
+          npm install -g eslint@8
+          npm install -g eslint-plugin-security
+
+      - name: Run ESLint
+        run: |
+          eslint \
+            --ext .js \
+            --rule 'no-eval: error' \
+            --rule 'no-implied-eval: error' \
+            --rule 'no-new-func: error' \
+            --rule 'security/detect-eval-with-expression: error' \
+            --rule 'security/detect-non-literal-require: error' \
+            background.js content.js shared.js popup/popup.js
+        continue-on-error: true
+
+  manifest-validation:
+    runs-on: ubuntu-latest
+    name: Manifest Validation
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate manifest.json
+        run: |
+          node -e "
+            const fs = require('fs');
+            const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+            
+            // Check required fields
+            if (!manifest.manifest_version || manifest.manifest_version !== 3) {
+              console.error('ERROR: manifest_version must be 3');
+              process.exit(1);
+            }
+            if (!manifest.version) {
+              console.error('ERROR: version is required');
+              process.exit(1);
+            }
+            if (!manifest.name) {
+              console.error('ERROR: name is required');
+              process.exit(1);
+            }
+            
+            // Check no forbidden permissions
+            const forbidden = ['scripting', 'tabs', 'activeTab', 'webRequest'];
+            const permissions = new Set(manifest.permissions || []);
+            for (const perm of forbidden) {
+              if (permissions.has(perm)) {
+                console.error('ERROR: forbidden permission:', perm);
+                process.exit(1);
+              }
+            }
+            
+            // Check host permissions are narrow
+            const hosts = manifest.host_permissions || [];
+            for (const host of hosts) {
+              if (host.includes('*') && !host.includes('colab.research.google.com')) {
+                console.error('ERROR: broad host permission:', host);
+                process.exit(1);
+              }
+            }
+            
+            console.log('Manifest validation passed');
+          "
+
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scan
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scan for dangerous patterns
+        run: |
+          # Check for eval/Function/new Function
+          if grep -rn "eval\s*(" --include="*.js" .; then
+            echo "ERROR: eval found"
+            exit 1
+          fi
+          if grep -rn "new\s*Function" --include="*.js" .; then
+            echo "ERROR: new Function found"
+            exit 1
+          fi
+          if grep -rn "Function\s*(" --include="*.js" .; then
+            echo "ERROR: Function() found"
+            exit 1
+          fi
+
+          # Check for inline event handlers in HTML
+          if grep -rn "on\(click\|load\|error\|submit\)=" --include="*.html" .; then
+            echo "ERROR: inline event handler found"
+            exit 1
+          fi
+
+          # Check for remote scripts
+          if grep -rn "src=\"http" --include="*.html" .; then
+            echo "ERROR: remote script found"
+            exit 1
+          fi
+
+          # Check for innerHTML
+          if grep -rn "\.innerHTML\s*=" --include="*.js" .; then
+            echo "ERROR: innerHTML assignment found"
+            exit 1
+          fi
+
+          echo "Security scan passed"
+
+  zip-artifact:
+    runs-on: ubuntu-latest
+    name: Build Release Zip
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate version
+        id: version
+        run: |
+          VERSION=$(node -e "console.log(require('./manifest.json').version)")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create release zip
+        run: |
+          zip -r colab-keepalive-v${{ steps.version.outputs.version }}.zip \
+            manifest.json background.js content.js shared.js popup/ icons/ icon.png \
+            -x "*/.DS_Store" -x "*/AGENTS.md"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: colab-keepalive-v${{ steps.version.outputs.version }}
+          path: colab-keepalive-v${{ steps.version.outputs.version }}.zip
+          retention-days: 30
