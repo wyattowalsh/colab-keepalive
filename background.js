@@ -26,6 +26,48 @@ const COLAB_URL_PATTERNS = [
 ];
 const COLAB_ORIGINS = new Set(["https://colab.research.google.com"]);
 
+/** In-memory fallback when chrome.storage.session is unavailable. */
+const sessionFallback = new Map();
+
+/**
+ * Reads from chrome.storage.session with fallback to memory.
+ * @template {string} K
+ * @param {K} key
+ * @returns {Promise<Record<K, any>>}
+ */
+async function sessionGet(key) {
+	try {
+		return await sessionGet(key);
+	} catch (error) {
+		console.warn(
+			LOG_PREFIX,
+			"session.get failed, using memory fallback",
+			error,
+		);
+		return { [key]: sessionFallback.get(key) };
+	}
+}
+
+/**
+ * Writes to chrome.storage.session with fallback to memory.
+ * @param {Record<string, any>} items
+ * @returns {Promise<void>}
+ */
+async function sessionSet(items) {
+	try {
+		await sessionSet(items);
+	} catch (error) {
+		console.warn(
+			LOG_PREFIX,
+			"session.set failed, using memory fallback",
+			error,
+		);
+		for (const [key, value] of Object.entries(items)) {
+			sessionFallback.set(key, value);
+		}
+	}
+}
+
 chrome.runtime.onInstalled.addListener(() => {
 	void initializeExtension();
 });
@@ -396,14 +438,14 @@ async function testClickOpenColabTab() {
  */
 async function recordTabStatus(tabId, status = {}) {
 	const { [SESSION_STATUS_KEY]: statuses = {} } =
-		await chrome.storage.session.get(SESSION_STATUS_KEY);
+		await sessionGet(SESSION_STATUS_KEY);
 	statuses[String(tabId)] = {
 		...(statuses[String(tabId)] || {}),
 		...status,
 		tabId,
 		updatedAt: status.updatedAt || Date.now(),
 	};
-	await chrome.storage.session.set({ [SESSION_STATUS_KEY]: statuses });
+	await sessionSet({ [SESSION_STATUS_KEY]: statuses });
 }
 
 /**
@@ -413,9 +455,9 @@ async function recordTabStatus(tabId, status = {}) {
  */
 async function removeTabStatus(tabId) {
 	const { [SESSION_STATUS_KEY]: statuses = {} } =
-		await chrome.storage.session.get(SESSION_STATUS_KEY);
+		await sessionGet(SESSION_STATUS_KEY);
 	delete statuses[String(tabId)];
-	await chrome.storage.session.set({ [SESSION_STATUS_KEY]: statuses });
+	await sessionSet({ [SESSION_STATUS_KEY]: statuses });
 	await updateBadge();
 }
 
@@ -426,7 +468,7 @@ async function removeTabStatus(tabId) {
  */
 async function clearTabErrors(tabId) {
 	const { [SESSION_STATUS_KEY]: statuses = {} } =
-		await chrome.storage.session.get(SESSION_STATUS_KEY);
+		await sessionGet(SESSION_STATUS_KEY);
 	const existing = statuses[String(tabId)];
 	if (!existing) return;
 	delete existing.state;
@@ -434,7 +476,7 @@ async function clearTabErrors(tabId) {
 	delete existing.lastError;
 	existing.failureCount = 0;
 	existing.clearedAt = Date.now();
-	await chrome.storage.session.set({ [SESSION_STATUS_KEY]: statuses });
+	await sessionSet({ [SESSION_STATUS_KEY]: statuses });
 }
 
 /**
@@ -443,7 +485,7 @@ async function clearTabErrors(tabId) {
  */
 async function clearAllErrors() {
 	const { [SESSION_STATUS_KEY]: statuses = {} } =
-		await chrome.storage.session.get(SESSION_STATUS_KEY);
+		await sessionGet(SESSION_STATUS_KEY);
 	for (const key of Object.keys(statuses)) {
 		delete statuses[key].state;
 		delete statuses[key].warning;
@@ -451,7 +493,7 @@ async function clearAllErrors() {
 		statuses[key].failureCount = 0;
 		statuses[key].clearedAt = Date.now();
 	}
-	await chrome.storage.session.set({ [SESSION_STATUS_KEY]: statuses });
+	await sessionSet({ [SESSION_STATUS_KEY]: statuses });
 }
 
 /**
@@ -486,7 +528,7 @@ async function updateBadge(settings) {
 	const currentSettings = settings || (await getSettings());
 	const tabs = await queryColabTabs();
 	const { [SESSION_STATUS_KEY]: statuses = {} } =
-		await chrome.storage.session.get(SESSION_STATUS_KEY);
+		await sessionGet(SESSION_STATUS_KEY);
 	const hasError = Object.values(statuses).some(
 		(status) => status?.state === "error" || status?.warning,
 	);
@@ -529,7 +571,7 @@ async function getPopupStatus() {
 		await Promise.all([
 			getSettings(),
 			queryColabTabs(),
-			chrome.storage.session.get(SESSION_STATUS_KEY),
+			sessionGet(SESSION_STATUS_KEY),
 			getAggregateUptime(),
 			checkNotificationPermission(),
 		]);
@@ -789,7 +831,7 @@ async function checkNotificationPermission() {
  */
 async function getAggregateUptime() {
 	const { [SESSION_STATUS_KEY]: statuses = {} } =
-		await chrome.storage.session.get(SESSION_STATUS_KEY);
+		await sessionGet(SESSION_STATUS_KEY);
 	const tabs = await queryColabTabs();
 	let totalMs = 0;
 	const seen = new Set();
@@ -800,7 +842,7 @@ async function getAggregateUptime() {
 		}
 	}
 	const { [SESSION_UPTIME_KEY]: persisted = {} } =
-		await chrome.storage.session.get(SESSION_UPTIME_KEY);
+		await sessionGet(SESSION_UPTIME_KEY);
 	totalMs += persisted.totalUptimeMs || 0;
 	const tabCount = tabs.length;
 	return {

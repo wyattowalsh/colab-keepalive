@@ -42,6 +42,8 @@ const state = {
 	uptimeStartAt: null,
 	totalUptimeMs: 0,
 	lastActivityAt: null,
+	// Coordination salt for coordinated mode (per-tab random offset)
+	coordSalt: Math.floor(Math.random() * 16000),
 };
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -499,23 +501,30 @@ async function checkMultiTabCoordination() {
 		return { skip: false };
 	}
 	if (mode === "primary") {
-		const response = await chrome.runtime.sendMessage({
-			source: SOURCE,
-			type: "CKA_NOTIFY_COORDINATED",
-			requestId: createRequestId(),
-			payload: { url: location.href },
-		});
-		const isPrimary = response?.ok && response.data?.isPrimary;
-		if (!isPrimary) {
-			return { skip: true, reason: "not-primary" };
+		try {
+			const response = await chrome.runtime.sendMessage({
+				source: SOURCE,
+				type: "CKA_NOTIFY_COORDINATED",
+				requestId: createRequestId(),
+				payload: { url: location.href },
+			});
+			const isPrimary = response?.ok && response.data?.isPrimary;
+			if (!isPrimary) {
+				return { skip: true, reason: "not-primary" };
+			}
+			return { skip: false };
+		} catch (error) {
+			debugLog("Primary check failed, allowing click", error?.message);
+			return { skip: false };
 		}
-		return { skip: false };
 	}
 	if (mode === "coordinated") {
-		// Spread clicks by hashing the URL to a 0–15 second delay
+		// Spread clicks by hashing the URL plus a per-tab salt to a 0–15 second delay
+		// Salt prevents same-URL tabs from colliding on identical delays
 		let hash = 0;
-		for (let i = 0; i < location.href.length; i++) {
-			hash = (hash << 5) - hash + location.href.charCodeAt(i);
+		const seed = location.href + String(state.coordSalt);
+		for (let i = 0; i < seed.length; i++) {
+			hash = (hash << 5) - hash + seed.charCodeAt(i);
 			hash |= 0;
 		}
 		const delay = Math.abs(hash) % 16000;

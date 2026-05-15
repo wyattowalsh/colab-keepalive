@@ -403,8 +403,22 @@ async function pasteJsonFromClipboard() {
 			return;
 		}
 		const parsed = JSON.parse(json);
+		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+			renderError("Clipboard does not contain valid settings JSON");
+			return;
+		}
+		// Strict validation: reject if any top-level key is not a known setting
+		const knownKeys = Object.keys(validateSettings({}));
+		const unknownKeys = Object.keys(parsed).filter(
+			(k) => !knownKeys.includes(k),
+		);
+		if (unknownKeys.length > 0) {
+			renderError(`Unknown settings keys: ${unknownKeys.join(", ")}`);
+			return;
+		}
+		const validated = validateSettings(parsed);
 		const response = await sendRuntimeMessage("CKA_IMPORT_SETTINGS", {
-			settings: parsed,
+			settings: validated,
 		});
 		if (!response.ok) {
 			renderError(response.error?.message || "Could not import settings");

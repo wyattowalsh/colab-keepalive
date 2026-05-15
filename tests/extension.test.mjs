@@ -231,3 +231,37 @@ test("source files avoid remote calls and dynamic code execution", async () => {
     assert.equal(/\bXMLHttpRequest\b/.test(source), false, basename(path));
   }
 });
+
+test("coordinated mode hash spreads same-URL tabs with salt", async () => {
+  const content = await readText("content.js");
+  assert.ok(content.includes("coordSalt"), "should generate per-tab salt");
+  assert.ok(content.includes("location.href + String(state.coordSalt)"), "should salt the hash seed");
+});
+
+test("clipboard paste rejects invalid settings shapes", async () => {
+  const popup = await readText("popup/popup.js");
+  assert.ok(popup.includes("!parsed"), "should reject null");
+  assert.ok(popup.includes("Array.isArray(parsed)"), "should reject arrays");
+  assert.ok(popup.includes('typeof parsed !== "object"'), "should reject non-objects");
+  assert.ok(popup.includes("Object.keys(validateSettings({}))"), "should compare against known keys");
+});
+
+test("validateSettings rejects extreme values", async () => {
+  const { validateSettings } = await loadShared();
+  const bad = validateSettings({
+    intervalSeconds: -1,
+    minIntervalSeconds: 1,
+    maxIntervalSeconds: 5000,
+    workStartHour: 50,
+    workEndHour: -10,
+    jitterRange: 99,
+    failureWarningThreshold: -5
+  });
+  assert.equal(bad.intervalSeconds >= bad.minIntervalSeconds && bad.intervalSeconds <= bad.maxIntervalSeconds, true, "interval clamped within min/max");
+  assert.equal(bad.minIntervalSeconds >= 5 && bad.minIntervalSeconds <= 3600, true, "minInterval clamped");
+  assert.equal(bad.maxIntervalSeconds >= bad.minIntervalSeconds && bad.maxIntervalSeconds <= 3600, true, "maxInterval clamped and >= min");
+  assert.equal(bad.workStartHour >= 0 && bad.workStartHour <= 23, true, "workStart clamped");
+  assert.equal(bad.workEndHour >= 0 && bad.workEndHour <= 23, true, "workEnd clamped");
+  assert.equal(bad.jitterRange >= 0 && bad.jitterRange <= 1, true, "jitter clamped");
+  assert.equal(bad.failureWarningThreshold >= 1 && bad.failureWarningThreshold <= 100, true, "threshold clamped");
+});
