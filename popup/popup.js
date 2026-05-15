@@ -85,6 +85,8 @@ const state = {
 
 const THEME_CYCLE = ["auto", "light", "dark"];
 
+const darkModeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
 /** @returns {void} */
 function applyTheme(theme) {
 	const html = document.documentElement;
@@ -93,8 +95,22 @@ function applyTheme(theme) {
 	} else if (theme === "dark") {
 		html.setAttribute("data-theme", "dark");
 	} else {
-		html.removeAttribute("data-theme");
+		// Auto: follow system preference
+		if (darkModeQuery.matches) {
+			html.setAttribute("data-theme", "dark");
+		} else {
+			html.removeAttribute("data-theme");
+		}
 	}
+}
+
+/** @returns {void} */
+function setupThemeListener() {
+	darkModeQuery.addEventListener("change", () => {
+		if (state.settings.theme === "auto") {
+			applyTheme("auto");
+		}
+	});
 }
 
 /** @returns {string} */
@@ -143,6 +159,7 @@ function applyCustomTheme(customTheme) {
 
 document.addEventListener("DOMContentLoaded", () => {
 	wireEvents();
+	setupThemeListener();
 	void refreshStatus();
 	window.setInterval(() => void refreshStatus(), 2000);
 	state.countdownTimer = window.setInterval(updateCountdown, 1000);
