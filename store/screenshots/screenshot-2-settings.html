@@ -238,6 +238,41 @@
         background: #fff;
         margin-bottom: 12px;
       }
+      .time-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .time-input {
+        flex: 1;
+        padding: 6px 10px;
+        border: 1px solid #dadce0;
+        border-radius: 6px;
+        font-size: 13px;
+        text-align: center;
+      }
+      .days-row {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 12px;
+      }
+      .day-btn {
+        width: 32px;
+        height: 32px;
+        border: 1px solid #dadce0;
+        border-radius: 6px;
+        background: #fff;
+        font-size: 11px;
+        color: #5f6368;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .day-btn.active {
+        background: #1a73e8;
+        color: #fff;
+        border-color: #1a73e8;
+      }
       .save-btn {
         width: 100%;
         padding: 10px;
@@ -296,6 +331,28 @@
               <div class="slider">
                 <div class="slider-fill" style="width: 15%"></div>
                 <div class="slider-thumb" style="left: 15%"></div>
+              </div>
+            </div>
+
+            <div class="section-title">Schedule</div>
+            <div class="control-group">
+              <div class="control-label">Work Hours</div>
+              <div class="time-row">
+                <input type="text" class="time-input" value="09:00" readonly />
+                <span style="color: #5f6368; font-size: 12px">to</span>
+                <input type="text" class="time-input" value="18:00" readonly />
+              </div>
+            </div>
+            <div class="control-group">
+              <div class="control-label">Active Days</div>
+              <div class="days-row">
+                <div class="day-btn active">M</div>
+                <div class="day-btn active">T</div>
+                <div class="day-btn active">W</div>
+                <div class="day-btn active">T</div>
+                <div class="day-btn active">F</div>
+                <div class="day-btn">S</div>
+                <div class="day-btn">S</div>
               </div>
             </div>
 

@@ -8,55 +8,60 @@
 
 ### Summary (from manifest — already set)
 
-Prevents Google Colab idle disconnects by safely clicking Connect/Reconnect with configurable timing.
+Reduces Google Colab local idle disconnects by safely clicking Connect/Reconnect with configurable timing.
 
 ### Description
 
 ```
-Keep your Google Colab notebooks running without interruption.
+Reduce Google Colab local idle disconnects without giving up privacy.
 
-Colab Keepalive safely prevents idle-session disconnects by periodically clicking the Connect/Reconnect button — exactly when needed, with human-like timing patterns.
+Colab Keepalive is a Manifest V3 browser extension that runs only on Google Colab pages. When Colab shows a visible Connect or Reconnect control, the extension can click it using your configured timing, schedule, and multi-tab preferences.
 
-✅ HUMANIZED SIGNALS
-• Screen Wake Lock API keeps your session alive at the OS level
-• Synthetic mouse, keyboard, scroll & focus events mimic real user activity
-• Smart jitter adds natural randomness to click intervals (5–35% variance)
-• Auto-dismisses "Session Expired" dialogs instantly
+LOCAL IDLE HELP
+• Clicks only visible, enabled Connect/Reconnect controls
+• Avoids connected-state controls such as Disconnect, Connected, and Connecting
+• Optional jitter and local idle-signal controls
+• Optional dismiss handling for common Colab idle dialogs
 
-✅ CONFIGURABLE TIMING
-• Adjustable interval: 1–60 minutes between keepalive clicks
-• Optional jitter randomization for natural-looking patterns
-• Manual "Test Click" button for instant verification
+CONFIGURABLE TIMING
+• Adjustable interval: 30–300 seconds
+• Jitter range: 5–35%
+• Work-hour and active-day schedule
+• Manual Test Click button for quick verification
 
-✅ CLEAN POPUP DASHBOARD
+POPUP DASHBOARD
 • Live status with uptime counter
-• Light / Dark / Auto theme support
-• One-toggle enable/disable
-• Permission status indicators
+• Lifetime stats for clicks, failures, success rate, and uptime
+• Light, dark, and auto theme support
+• One-toggle enable/disable and error clearing
 
-✅ KEYBOARD SHORTCUTS
-• Toggle on/off: Ctrl+Shift+K (Cmd+Shift+K on Mac)
-• Trigger immediate click: Ctrl+Shift+J
-• Toggle humanization: Ctrl+Shift+H
+KEYBOARD SHORTCUTS
+• Browser shortcuts available through chrome://extensions/shortcuts
+• Commands for toggle on/off, immediate click, and local-signal controls
 
-✅ PRIVACY-FIRST
+PRIVACY-FIRST
 • No analytics, tracking, or external network calls
-• No data collection whatsoever
-• Open source — full transparency
+• No remote code or third-party content
+• No account required
+• Open source and auditable
+
+IMPORTANT LIMITS
+Colab Keepalive is a local browser helper. It does not bypass Google Colab quotas, maximum runtime limits, account restrictions, CAPTCHAs, rate limits, payment tiers, abuse protections, or any other server-side enforcement.
 
 PERMISSIONS EXPLAINED
 • Storage — saves your timing & settings preferences
 • Alarms — lightweight background reconciliation
 • Notifications — optional alerts for errors & dialogs
+• Context menus — quick actions on Colab pages
 
 SUPPORT & SOURCE
-• GitHub: https://github.com/wwadge/colab-keepalive
+• GitHub: https://github.com/wyattowalsh/colab-keepalive
 • Issues & feature requests welcome
 ```
 
 ### Category
 
-**Productivity**
+**Developer Tools**
 
 ### Language
 
@@ -77,23 +82,27 @@ Use the existing `icons/icon-128.png` from the package.
 
 Recommended specs: 1280×800 or 640×400, JPEG or 24-bit PNG (no alpha channel)
 
-Capture these scenes on a Google Colab notebook page:
+Use the generated assets in `store-assets/` or capture equivalent scenes on a Google Colab notebook page:
 
-1. **Screenshot 1 — "Popup Dashboard (Dark)"**
-   Open the extension popup with the dark theme active while on a Colab page.
-   Shows: enabled status, uptime counter, humanization indicators, jitter slider.
+1. **Screenshot 1 — "Popup Dashboard"**
+   `store-assets/screenshot-1-dashboard.png`
+   Shows: enabled status, Colab tab count, uptime, next click, lifetime stats, test click, and limitation callout.
 
-2. **Screenshot 2 — "Popup Dashboard (Light)"**
-   Same popup with light theme active.
+2. **Screenshot 2 — "Settings & Timing"**
+   `store-assets/screenshot-2-settings.png`
+   Shows: interval, jitter, schedule, target mode, local-signal controls, and notifications.
 
-3. **Screenshot 3 — "Settings & Timing"**
-   Focus on the interval controls and toggle switches (Humanize, Simulate Activity, Dismiss Dialogs).
+3. **Screenshot 3 — "Advanced Controls"**
+   `store-assets/screenshot-3-advanced.png`
+   Shows: multi-tab coordination, appearance controls, and backup/restore.
 
-4. **Screenshot 4 — "Colab Page In Action"**
-   The Colab notebook page with the Connect button visible and the extension badge showing "ON".
+4. **Screenshot 4 — "Dark Mode Dashboard"**
+   `store-assets/screenshot-4-dark-mode.png`
+   Shows: same status flow in dark mode with readable contrast.
 
-5. **Screenshot 5 — "Keyboard Shortcuts"**
-   Screenshot of Chrome's `chrome://extensions/shortcuts` page showing the three bound shortcuts.
+5. **Screenshot 5 — "Context Menu"**
+   `store-assets/screenshot-5-context-menu.png`
+   Shows: Colab-only right-click actions for Toggle Keepalive, Click Now, and Open Settings.
 
 ### Small Promo Tile (Optional but recommended)
 
@@ -101,11 +110,11 @@ Size: 440×280 px | JPEG or 24-bit PNG (no alpha)
 
 **Design spec:**
 
-- Background: dark gradient (#1a1a2e to #16213e)
-- Left side: Colab orange/yellow flame icon stylized
-- Right side: large white text "KEEP COLAB ALIVE"
-- Subtext: "Humanized · Configurable · Private"
-- Bottom-right: small extension badge "Chrome Extension"
+- File: `store-assets/promo-small.png`
+- Background: blue gradient (#1a73e8 to #0d47a1)
+- Text: "Colab Keepalive"
+- Subtext: "Reduce local idle disconnects"
+- Trust badges: "Private" and "Colab-only"
 
 ### Marquee Promo Tile (Optional but recommended)
 
@@ -113,11 +122,12 @@ Size: 1400×560 px | JPEG or 24-bit PNG (no alpha)
 
 **Design spec:**
 
-- Background: same dark gradient
-- Left 40%: laptop/browser mockup showing Colab page with active status
-- Right 60%: headline "Never Lose a Colab Session Again"
-- Bullet points: "Humanized Activity · Smart Timing · Auto-Reconnect"
-- Bottom: CTA button style text "Free on Chrome Web Store"
+- File: `store-assets/promo-marquee.png`
+- Background: blue/dark gradient
+- Left 40%: browser mockup showing Colab page and extension popup
+- Right 60%: headline "Reduce Colab Idle Disconnects"
+- Bullet points: "Visible controls only", "Zero telemetry", "Schedule-aware", "Quotas still apply"
+- Bottom: limitation note: "Local helper for Colab UI idle prompts"
 
 ---
 
@@ -129,11 +139,11 @@ Size: 1400×560 px | JPEG or 24-bit PNG (no alpha)
 
 ### Homepage URL
 
-`https://github.com/wwadge/colab-keepalive`
+`https://github.com/wyattowalsh/colab-keepalive`
 
 ### Support URL
 
-`https://github.com/wwadge/colab-keepalive/issues`
+`https://github.com/wyattowalsh/colab-keepalive/issues`
 
 ### Mature Content
 
@@ -151,7 +161,7 @@ Size: 1400×560 px | JPEG or 24-bit PNG (no alpha)
 
 ## Privacy Practices Tab (fill separately)
 
-- **Single purpose**: Yes — prevents Colab idle disconnects
+- **Single purpose**: Yes — reduces local Colab idle disconnects
 - **Permission justification**: Already covered in description
 - **Data collection**: Does NOT collect or transmit any user data
 - **Remote code**: No remote code execution

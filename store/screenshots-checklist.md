@@ -6,6 +6,7 @@
 - **Recommended**: 4-5 screenshots showing different features
 - **Format**: PNG or JPEG
 - **Aspect Ratio**: 16:10 (1280x800) or 4:3 (640x480)
+- **Generated assets**: Run `python3 scripts/generate-store-assets.py` to create PNGs under `store-assets/`.
 
 ## Required Screenshots
 
@@ -15,12 +16,12 @@
 
 - [ ] Shows extension popup open on a Colab page
 - [ ] Dashboard tab is active
-- [ ] Status section visible: "Watching X tabs", uptime display
-- [ ] Lifetime stats visible: clicks, failures, success rate
+- [ ] Status section visible: Colab tabs, uptime, next click, last click, failures
+- [ ] Lifetime stats visible: clicks, success rate, total uptime, longest session
 - [ ] Next click countdown timer visible
 - [ ] Test Click button visible
 - [ ] Error count (if any) visible
-- [ ] Dark mode for visual appeal (or light mode if preferred)
+- [ ] Local-helper limitation visible: quotas and runtime limits still apply
 
 **Steps to capture:**
 
@@ -37,8 +38,8 @@
 - [ ] Timing controls visible: interval slider (e.g., 60s), jitter range
 - [ ] Behavior toggles visible: humanization, simulate activity, dismiss dialogs
 - [ ] Target mode dropdown visible
-- [ ] Failure warning threshold slider visible
-- [ ] Save button visible (should show "Saved" state)
+- [ ] Schedule and notifications controls visible
+- [ ] Save state visible as "Saved"
 
 **Steps to capture:**
 
@@ -52,17 +53,16 @@
 **Priority: HIGHLY RECOMMENDED**
 
 - [ ] Advanced tab is active
-- [ ] Schedule section visible: work hours (9-17), active days (Mon-Fri selected)
 - [ ] Multi-tab section visible: sync mode dropdown, multi-tab toggle
-- [ ] Theme section visible: auto/light/dark toggle, custom colors
+- [ ] Appearance section visible: custom colors
 - [ ] Backup & Restore section visible: Copy JSON / Paste JSON buttons
 
 **Steps to capture:**
 
 1. Click Advanced tab
-2. Set work hours to 9-17
-3. Select Mon-Fri for active days
-4. Set theme to Dark
+2. Enable multi-tab coordination
+3. Confirm appearance controls are visible
+4. Confirm backup/restore buttons are visible
 5. Screenshot
 
 ### 4. Dark Mode Comparison (1280x800)
@@ -85,8 +85,9 @@
 
 - [ ] Right-click on Colab page
 - [ ] Extension context menu visible
-- [ ] Shows "Test Click Now" option
-- [ ] Shows other extension options
+- [ ] Shows "Toggle Keepalive" option
+- [ ] Shows "Click Now" option
+- [ ] Shows "Open Settings" option
 
 **Steps to capture:**
 
@@ -131,7 +132,7 @@
 
 - [ ] Clean, minimal design
 - [ ] Extension name: "Colab Keepalive"
-- [ ] Tagline: "Never lose a session to idle timeout"
+- [ ] Tagline: "Reduce local idle disconnects"
 - [ ] Blue accent color (#1a73e8)
 - [ ] Simple icon or illustration
 
@@ -142,8 +143,9 @@
 - [ ] Professional, polished design
 - [ ] Shows extension value proposition
 - [ ] Could include: Colab interface + extension popup side by side
-- [ ] Text: "Keep Your Colab Sessions Alive"
-- [ ] Subtext: "Privacy-first · Smart · Automatic"
+- [ ] Text: "Reduce Colab Idle Disconnects"
+- [ ] Subtext: "Private · Configurable · Colab-only"
+- [ ] Limitation note: "Quotas and runtime limits still apply"
 
 ### Marquee (1400x560)
 
@@ -152,6 +154,7 @@
 - [ ] Feature highlights with icons
 - [ ] Privacy icon, Schedule icon, Multi-tab icon, Dark mode icon
 - [ ] Clean layout with plenty of whitespace
+- [ ] No guarantee language promising uninterrupted sessions
 
 ## Screenshot Best Practices
 
@@ -177,3 +180,4 @@
 - [ ] Images optimized (compressed without quality loss)
 - [ ] File names are descriptive (e.g., `screenshot-1-dashboard.png`)
 - [ ] No sensitive or personal information visible in screenshots
+- [ ] Store copy and images do not imply quota, runtime, CAPTCHA, rate-limit, or payment-tier bypass

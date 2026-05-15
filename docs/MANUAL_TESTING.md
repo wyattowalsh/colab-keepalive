@@ -9,7 +9,7 @@ Use this checklist before publishing or relying on a local unpacked build.
 - Enable Developer mode.
 - Click **Load unpacked** and select the repository root.
 - Confirm the extension loads without manifest, service worker, CSP, or icon errors.
-- Confirm the displayed name is **Colab Keepalive** and version is **1.0.0**.
+- Confirm the displayed name is **Colab Keepalive** and version is **2.0.0**.
 
 ## Icons
 
@@ -19,9 +19,9 @@ Use this checklist before publishing or relying on a local unpacked build.
 
 ## Permissions
 
-- Confirm Chrome shows only the Colab site access plus `storage` and `alarms`.
+- Confirm Chrome shows only the Colab site access plus `storage`, `alarms`, `notifications`, and `contextMenus`.
 - Confirm there are no permission warnings for all sites, tabs, activeTab, scripting, webRequest, or remote code.
-- Confirm `notifications` is **not** listed in manifest permissions (it is requested at runtime).
+- Confirm `notifications` is present only for optional browser notifications.
 
 ## Popup — General
 

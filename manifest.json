@@ -3,7 +3,7 @@
 	"minimum_chrome_version": "120",
 	"name": "Colab Keepalive",
 	"version": "2.0.0",
-	"description": "Prevents Google Colab idle disconnects by safely clicking Connect/Reconnect with configurable timing.",
+	"description": "Reduces Google Colab local idle disconnects by safely clicking Connect/Reconnect with configurable timing.",
 	"icons": {
 		"16": "icons/icon-16.png",
 		"32": "icons/icon-32.png",

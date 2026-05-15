@@ -1,26 +1,26 @@
 # Privacy Policy
 
-**Last Updated:** May 14, 2026
+**Last Updated:** May 15, 2026
 
 ## Introduction
 
-Colab Keepalive ("we", "our", or "the extension") is a browser extension designed to prevent Google Colab from disconnecting due to browser idle timeouts. This privacy policy explains what information we collect, how we use it, and your rights.
+Colab Keepalive ("we", "our", or "the extension") is a browser extension designed to reduce Google Colab local browser idle disconnects by interacting with visible Connect/Reconnect controls on Colab pages. This privacy policy explains what information the extension stores and what it does not collect.
 
 ## Information We Collect
 
 **We collect NO personal information.**
 
-The extension operates entirely within your browser and does not transmit any data to external servers. All data stays local to your device.
+The extension operates entirely within your browser and does not transmit data to extension-operated servers. Extension data is stored in Chrome's extension storage. If you have Chrome Sync enabled, Chrome may sync `chrome.storage.sync` data through your Google account according to Chrome's own settings and policies.
 
 ### Local Storage
 
 The extension stores the following information locally in your browser:
 
-- **Extension settings**: Your preferences (timing intervals, schedules, theme, etc.)
-- **Lifetime statistics**: Anonymous counters (total clicks, uptime, failures)
-- **Session status**: Per-tab activity status for coordination
+- **Extension settings**: Preferences such as timing intervals, schedules, theme, and notification settings
+- **Lifetime statistics**: Local counters such as total clicks, total uptime, and failures
+- **Session status**: Volatile per-tab activity status used for badge display and multi-tab coordination
 
-This data is stored using Chrome's built-in storage APIs (`chrome.storage.sync` and `chrome.storage.session`) and never leaves your browser.
+This data is stored using Chrome's built-in storage APIs (`chrome.storage.sync` and `chrome.storage.session`). The extension does not send this data to any external endpoint.
 
 ### What We Do NOT Collect
 
@@ -29,6 +29,7 @@ We do NOT collect or transmit:
 - Personal identifiers (name, email, address, phone number)
 - Browsing history
 - Website content or data
+- Notebook source, outputs, prompts, files, or execution results
 - Google account information
 - IP addresses
 - Device information
@@ -37,13 +38,14 @@ We do NOT collect or transmit:
 
 ## How We Use Information
 
-Since we collect no personal information, there is no usage of personal data.
+Since we collect no personal information, there is no usage of personal data by the extension.
 
 Local settings are used solely to:
 
 - Remember your preferences between browser sessions
 - Coordinate multi-tab behavior (if enabled)
 - Display lifetime statistics in the popup
+- Show the current status badge and optional browser notifications
 
 ## Data Sharing
 
@@ -54,7 +56,7 @@ The extension:
 - Has no external API calls
 - Has no analytics or tracking
 - Has no remote logging
-- Has no data synchronization with external services
+- Has no extension-operated data synchronization with external services
 - Does not embed third-party content
 
 ## Permissions Justification
@@ -70,9 +72,11 @@ The extension requests the following permissions:
 
 Host permissions are limited to `colab.research.google.com` and subdomains only.
 
+The extension does not request broad host access, `tabs`, `activeTab`, `scripting`, `webRequest`, or access to all websites.
+
 ## Your Rights
 
-Since we collect no personal data, there is no personal data to access, modify, or delete.
+Since the extension collects no personal data, there is no extension-collected personal data to access, modify, sell, or delete.
 
 You can:
 
@@ -97,15 +101,14 @@ We may update this privacy policy as the extension evolves. Changes will be post
 
 ## Contact
 
-For privacy concerns or questions:
+For privacy concerns or questions, use GitHub Issues:
 
-- GitHub Issues: https://github.com/ww/colab-keepalive/issues
-- Email: [Your contact email]
+- GitHub Issues: https://github.com/wyattowalsh/colab-keepalive/issues
 
 ## Open Source
 
 This extension is open source. You can audit the code at:
-https://github.com/ww/colab-keepalive
+https://github.com/wyattowalsh/colab-keepalive
 
 ## Compliance
 
@@ -114,3 +117,7 @@ This extension complies with:
 - Chrome Web Store Developer Program Policies
 - General Data Protection Regulation (GDPR) — no personal data collected
 - California Consumer Privacy Act (CCPA) — no personal information sold or shared
+
+## Disclaimer
+
+Google Colab is a trademark of Google LLC. Colab Keepalive is not affiliated with, endorsed by, or sponsored by Google. The extension does not bypass Colab quotas, maximum runtime limits, account restrictions, CAPTCHAs, rate limits, payment tiers, abuse protections, or other server-side enforcement.
